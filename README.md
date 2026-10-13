@@ -45,7 +45,7 @@ Every other KAN library stops at research. `kanx` goes the full distance:
 | REST API service  | ❌ | ❌ | ❌ | ✅ FastAPI |
 | Docker + K8s      | ❌ | ❌ | ❌ | ✅ |
 | Property-based tests | ❌ | ❌ | ❌ | ✅ Hypothesis |
-| Test coverage     | research | research | research | **94%** |
+| Test coverage     | research | research | research | **CI + Hypothesis** |
 | PyPI              | ✅ | ✅ | ✅ | ✅ |
 | CI/CD release pipeline | ❌ | ❌ | ❌ | ✅ PyPI + GHCR + Pages |
 
@@ -86,6 +86,13 @@ are universally better than MLPs.
 
 Reproduce with `python benchmarks/compare_mlp.py` (quick, 100 epochs) or
 `python benchmarks/compare_mlp.py --long` (1000 epochs + early-stopping).
+
+CI runs a CPU smoke gate that does not rewrite the published tables:
+
+```bash
+python benchmarks/compare_mlp.py --smoke
+python benchmarks/real_world.py --smoke   # needs scikit-learn for California housing
+```
 
 ---
 
@@ -165,6 +172,22 @@ model = MatrixKAN([4, 32, 1])  # same interface as KAN
 model.fit(X, y, epochs=30)      # ~1.5–2× faster on GPU vs standard KAN
 ```
 
+TensorBoard logging and symbolic edge fitting are included:
+
+```bash
+python -m kanx train --config configs/default.yaml --tensorboard
+tensorboard --logdir logs/kanx
+```
+
+```python
+import torch
+from kanx.torch import KAN, SymbolicFitter
+
+model = KAN([1, 1])
+x_1d = torch.linspace(-1, 1, 64)
+name, r2 = SymbolicFitter(model).fit_edge(0, 0, 0, x_1d)
+```
+
 ---
 
 ## 📦 Installation
@@ -193,21 +216,19 @@ Optional extras:
 
 ## 🏗️ Production Serving
 
-We include out-of-the-box serving. Simply install `kanx[api]` and run:
+Install `kanx[api]` and start the FastAPI app with uvicorn. Prometheus scrapes `/metrics`.
 
 ```bash
-# Starts a FastAPI server with Prometheus scraping at /metrics
-python -m kanx.serve 
-
+uvicorn api.app:app --port 8000
 ```
+
+Kubernetes manifests (Deployment, Service, Ingress, HPA, PVC) live in [`k8s/`](k8s/).
 
 **API Contract:**
 
 * `GET /api/health` - Liveness & model load source
 * `GET /api/info` - TF/Torch backend version and summary
 * `POST /api/predict` - Batched inference
-
-*For enterprise scaling, see our `/k8s` directory for Helm charts and Kubernetes manifests.*
 
 ---
 
@@ -292,12 +313,11 @@ python -m kanx predict --checkpoint model.keras --input X.json
 
 ## ⭐ Quality
 
-- **95 tests** across 8 files — unit, integration, E2E, property-based, performance regression
-- **94% library coverage** (99% layers, 100% model)
+- Unit, integration, live API, property-based, and performance tests in [`tests/`](tests/)
 - **Hypothesis property tests**: partition of unity, shape invariants, gradient finiteness
 - **Numerical contracts**: ONNX parity within 1e-5, save/load roundtrip identity
 - **Performance regression alarms**: latency budgets on forward pass and predict
-- CI matrix: Python 3.10 / 3.11 / 3.12 + lint + Docker smoke + MkDocs build
+- CI: Python 3.10 / 3.11 / 3.12, lint, Docker smoke, MkDocs, and a CPU benchmark smoke gate
 
 ```bash
 pytest tests/ -v --cov=src/kanx

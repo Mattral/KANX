@@ -45,9 +45,9 @@ Open a draft PR early. We'd rather discuss with code in front of us!
 
 ### High-leverage ideas (currently unowned)
 
-- Adaptive grid update (`update_grid_from_samples`) — P0
-- HuggingFace Hub integration (`KAN.from_pretrained(...)`) — P0
-- Prometheus `/metrics` middleware on the FastAPI service — P1
+- Pruning / sparsification of unused edges — next
+- PyTorch subprocess benchmark wrapper for GPU runners — next
+- Mixed precision and XLA on the spline einsum — next
 - JAX backend (third parallel surface) — P1
 - `kanx.viz` interactive edge-function viewer — P2
 

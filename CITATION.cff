@@ -5,7 +5,7 @@ title: "KANX: Production-grade Kolmogorov-Arnold Networks"
 authors:
   - family-names: "Myet"
     given-names: "Min Htet"
-version: "0.1.8"
+version: "0.1.9"
 doi: "10.5281/zenodo.20430883"
 repository-code: "https://github.com/Mattral/KANX"
 license: Apache-2.0

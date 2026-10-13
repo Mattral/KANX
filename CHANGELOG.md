@@ -6,6 +6,32 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+- **CPU benchmark smoke gate.** `python benchmarks/compare_mlp.py --smoke` and `python benchmarks/real_world.py --smoke` train a tiny CPU configuration and exit non-zero when metrics are missing or non-finite. The `benchmark-smoke` GitHub Actions job runs both commands. Smoke mode writes only to `--output` and leaves the committed baseline artifacts in place.
+- `load_california_housing()` now loads NumPy arrays directly, so the real-world smoke gate needs scikit-learn and does not need pandas.
+
+### Changed
+- Synced `roadmap.md` and `README.md` with the features already shipped in 0.1.8 and 0.1.9: MatrixKAN, adaptive grids, HuggingFace Hub, symbolic regression, TensorBoard, and Prometheus.
+- Recorded the 0.1.9 release in this changelog. `docs/changelog.md` and `docs/roadmap.md` now include these files so the site cannot drift.
+- Set `CITATION.cff` `version` to 0.1.9 so it matches the package.
+- CI installs the `hub` extra for the test job, because importing `kanx` loads the Hub helpers.
+- Docker image install already includes that extra (landed after the 0.1.9 notes above).
+
+## [0.1.9] - 2026-06-19
+
+### Fixed
+- Corrected `update_grid_from_samples` in both TensorFlow and PyTorch backends so each layer keeps the incoming feature width.
+- Resolved failing grid-update improvement tests by propagating activations through `KANLinear` layers in order.
+- Fixed the Dockerfile build by aligning the `README.md` copy path with the repository layout.
+- Addressed MkDocs path warnings for `roadmap.md`, `CONTRIBUTING.md`, and `reference/README.md`.
+
+### Changed
+- Simplified the grid-update implementation for lint compliance.
+- Docs CI no longer aborts the MkDocs build on non-critical warnings.
+
+### Added
+- MatrixKAN grid-update and ONNX export tests.
+
 ## [0.1.8] - 2026-06-03
 
 ### Added
@@ -197,7 +223,8 @@ Initial production release.
 - Hand-rolled YAML validator (no pydantic dep in the core library).
 - API uses pydantic only at the request-boundary edge.
 
-[Unreleased]: https://github.com/Mattral/KANX/compare/v0.1.8...HEAD
+[Unreleased]: https://github.com/Mattral/KANX/compare/v0.1.9...HEAD
+[0.1.9]: https://github.com/Mattral/KANX/releases/tag/v0.1.9
 [0.1.8]: https://github.com/Mattral/KANX/releases/tag/v0.1.8
 [0.1.7]: https://github.com/Mattral/KANX/releases/tag/v0.1.7
 [0.1.6]: https://github.com/Mattral/KANX/releases/tag/v0.1.6

@@ -157,7 +157,7 @@ Reproduce with `python benchmarks/compare_mlp.py` (quick, 100 epochs) or
 | REST API service  | ❌ | ❌ | ❌ | ✅ FastAPI |
 | Docker + K8s      | ❌ | ❌ | ❌ | ✅ |
 | Property-based tests | ❌ | ❌ | ❌ | ✅ Hypothesis |
-| Test coverage     | research | research | research | **94%** |
+| Test coverage     | research | research | research | **CI + Hypothesis** |
 | PyPI              | ✅ | ✅ | ✅ | ✅ |
 | CI/CD release pipeline | ❌ | ❌ | ❌ | ✅ PyPI + GHCR + Pages |
 

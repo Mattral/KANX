@@ -59,7 +59,9 @@ def load_california_housing():
     except ImportError as exc:
         raise ImportError("scikit-learn is required to load California Housing. Install kanx[dev] or scikit-learn") from exc
 
-    data = fetch_california_housing(as_frame=True)
+    # as_frame=False keeps this loader on NumPy. as_frame=True pulls in pandas,
+    # which the benchmark smoke gate does not install.
+    data = fetch_california_housing(as_frame=False)
     X = np.asarray(data.data, dtype=np.float32)
     y = np.asarray(data.target, dtype=np.float32).reshape(-1, 1)
     X = _normalize(X)

@@ -50,7 +50,12 @@ Single source of truth for what's shipped and what's next.
 - ✅ `notebooks/LAUNCH_POST.md` — community launch copy
 - ✅ Benchmark chart (`docs/assets/benchmark.png`) — KAN[2,32,1] beats MLP[2,64,64,1] by ~265× MSE with 5× fewer params
 
-## ✅ Shipped — v0.2.0 (June 2026)
+## ✅ Shipped — 0.1.7 through 0.1.9 (June 2026)
+
+These features shipped in package versions 0.1.7, 0.1.8, and 0.1.9.
+0.1.7 shipped MatrixKAN, adaptive grids, the dataset loaders, and the
+real-world benchmark. 0.1.8 added Hub, symbolic regression, TensorBoard, and
+Prometheus. 0.1.9 fixed multi-layer grid updates and the Docker image.
 
 ### New features
 - ✅ **MatrixKAN** (GPU-optimized, PyTorch): B-spline evaluation via batched GEMM instead of Cox-de Boor recursion; ~1.5–2× faster on GPU
@@ -84,6 +89,11 @@ Single source of truth for what's shipped and what's next.
   - Outputs `benchmarks/results/real_world_results.json` (committed baseline)
   - Includes train time, RMSE, R², inference latency (CPU + GPU)
   - **CPU+GPU compatible**: Runs on CPU; GPU fields populated when available
+- ✅ **HuggingFace Hub** (`kanx[hub]`): `KAN.from_pretrained()` and `push_to_hub()` on TensorFlow and PyTorch
+- ✅ **Symbolic regression** (`kanx[symbolic]`): `kanx.torch.SymbolicFitter` fits closed forms to learned edges
+- ✅ **TensorBoard** on both training paths (`python -m kanx train --tensorboard`)
+- ✅ **Prometheus** scrape endpoint at `GET /metrics` in the FastAPI service
+- ✅ **CPU benchmark smoke gate**: `benchmarks/compare_mlp.py --smoke` and `benchmarks/real_world.py --smoke`, run from the `benchmark-smoke` GitHub Actions job. Smoke runs do not overwrite the committed baseline artifacts.
 
 ### Infrastructure & quality
 - ✅ **CITATION.cff** (CFF v1.2.0 format) — machine-readable citation for academic attribution
@@ -92,22 +102,18 @@ Single source of truth for what's shipped and what's next.
 - ✅ **README updates**: Grid calibration best practices, MatrixKAN introduction, adaptive approach recommended
 - ✅ **Quickstart.md** additions: Grid update example (TF + PyTorch), MatrixKAN section
 - ✅ **System Design docs**: MatrixKAN architecture, adaptive grid implementation details, GPU considerations
-- ✅ **Roadmap clarity**: Honest "Shipped v0.2.0" vs "In progress" demarcation
+- ✅ **Roadmap clarity**: shipped 0.1.7–0.1.9 work is listed above; open items stay in Next and the backlogs
 
 ### Test coverage
 - ✅ **7 MatrixKAN tests** (`tests/test_matrix_kan.py`): output shape, numerical agreement, GPU throughput, grid update, ONNX export
 - ✅ **8 grid-update tests** (`tests/test_grid_update.py`): TensorFlow + PyTorch shape/stability/improvement
 - Cumulative: **110 tests** across 10 files; **95%+ coverage** on core modules
 
-## 🟡 In progress / Next iteration
+## 🟡 Next iteration
 
-- [ ] **CI benchmark gate** (GitHub Actions): smoke-test synthetic + real-world benchmarks on CPU
-- [ ] **PyTorch subprocess benchmark wrapper**: Run PyTorch benchmarks in separate process on GPU runners to avoid TensorFlow+PyTorch segfault (CPU-only)
+- [ ] **PyTorch subprocess benchmark wrapper**: Run PyTorch benchmarks in a separate process on GPU runners to avoid a TensorFlow+PyTorch segfault
 - [ ] **Pruning / sparsification** to drop unused edges
-- [ ] **Symbolic regression** post-hoc fit per edge
 - [ ] **Mixed precision** + XLA JIT on the spline einsum
-- [ ] **TensorBoard callback** wired into `train()`
-- [ ] **HuggingFace Hub integration** — `KAN.from_pretrained("user/model")`
 
 ## 🔵 Backlog (P1)
 

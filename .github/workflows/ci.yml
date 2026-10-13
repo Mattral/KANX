@@ -27,7 +27,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install -e .[dev,api,onnx]
+          pip install -e ".[dev,api,onnx,hub]"
           # Torch CPU wheel from the dedicated index
           pip install --index-url https://download.pytorch.org/whl/cpu torch
 
@@ -94,3 +94,36 @@ jobs:
         run: |
           pip install mkdocs mkdocs-material
           mkdocs build
+
+  benchmark-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install package and California-housing loader
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,hub]"
+          pip install scikit-learn
+
+      - name: Smoke-test synthetic benchmark on CPU
+        env:
+          TF_CPP_MIN_LOG_LEVEL: "3"
+          OMP_NUM_THREADS: "1"
+          OPENBLAS_NUM_THREADS: "1"
+          MKL_NUM_THREADS: "1"
+        run: python benchmarks/compare_mlp.py --smoke --output "${{ runner.temp }}/compare.md"
+
+      - name: Smoke-test real-world benchmark on CPU
+        env:
+          TF_CPP_MIN_LOG_LEVEL: "3"
+          OMP_NUM_THREADS: "1"
+          OPENBLAS_NUM_THREADS: "1"
+          MKL_NUM_THREADS: "1"
+        run: python benchmarks/real_world.py --smoke --output "${{ runner.temp }}/real_world.json"

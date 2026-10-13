@@ -9,11 +9,13 @@ PyTorch benchmarks can be run separately or on systems with proper CUDA support.
 
 Run with:
     python benchmarks/real_world.py --datasets california --epochs 3
+    python benchmarks/real_world.py --smoke
 """
 from __future__ import annotations
 
 import argparse
 import json
+import math
 import platform
 import time
 from dataclasses import asdict, dataclass
@@ -75,23 +77,33 @@ def r2_score(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     return float(1.0 - ss_res / ss_tot) if ss_tot > 0 else 0.0
 
 
-def split_five_folds(n: int, seed: int = 0) -> list[np.ndarray]:
+def split_folds(n: int, n_folds: int = 5, seed: int = 0) -> list[np.ndarray]:
+    if n_folds < 1:
+        raise ValueError("n_folds must be >= 1")
+    if n < n_folds:
+        raise ValueError(f"need at least {n_folds} rows to build {n_folds} folds, got {n}")
     rng = np.random.default_rng(seed)
     idx = np.arange(n)
     rng.shuffle(idx)
-    return list(np.array_split(idx, 5))
+    return list(np.array_split(idx, n_folds))
 
 
-def train_tf_model(X: np.ndarray, y: np.ndarray, epochs: int, device: str) -> tf.keras.Model:
+def train_tf_model(
+    X: np.ndarray,
+    y: np.ndarray,
+    epochs: int,
+    device: str,
+    hidden: int = 32,
+) -> tf.keras.Model:
     set_global_seed(0)
     if device == "cuda":
         tf_device = "/GPU:0"
     else:
         tf_device = "/CPU:0"
     with tf.device(tf_device):
-        model = TF_KAN([X.shape[1], 32, 1])
+        model = TF_KAN([X.shape[1], hidden, 1])
         model.compile(optimizer=tf.keras.optimizers.Adam(1e-2), loss="mse")
-        model.fit(X, y, epochs=epochs, batch_size=128, verbose=0)
+        model.fit(X, y, epochs=epochs, batch_size=min(128, X.shape[0]), verbose=0)
     return model
 
 
@@ -140,26 +152,34 @@ def summary_markdown(results: list[BenchmarkResult]) -> str:
     return "\n".join(lines)
 
 
-def benchmark_model(
+def evaluate_dataset(
     dataset_name: str,
-    n_features: int,
+    X: np.ndarray,
+    y: np.ndarray,
+    *,
     epochs: int,
     device: str,
+    n_folds: int = 5,
+    hidden: int = 32,
+    latency_runs: int = 100,
 ) -> BenchmarkResult:
-    X, y, _ = build_dataset(dataset_name)
-    folds = split_five_folds(len(X), seed=0)
+    folds = split_folds(len(X), n_folds=n_folds, seed=0)
     rmse_scores = []
     r2_scores = []
     train_times = []
     params = None
     for fold in range(len(folds)):
         test_idx = folds[fold]
-        train_idx = np.concatenate([f for i, f in enumerate(folds) if i != fold])
+        train_parts = [part for i, part in enumerate(folds) if i != fold]
+        if train_parts:
+            train_idx = np.concatenate(train_parts)
+        else:
+            train_idx = test_idx
         X_train, y_train = X[train_idx], y[train_idx]
         X_test, y_test = X[test_idx], y[test_idx]
 
         start = time.perf_counter()
-        model = train_tf_model(X_train, y_train, epochs=epochs, device=device)
+        model = train_tf_model(X_train, y_train, epochs=epochs, device=device, hidden=hidden)
         train_times.append(time.perf_counter() - start)
         fold_rmse, fold_r2 = evaluate_tf_model(model, X_test, y_test)
         if params is None:
@@ -168,9 +188,9 @@ def benchmark_model(
         rmse_scores.append(fold_rmse)
         r2_scores.append(fold_r2)
 
-    # final model for inference timing
-    model = train_tf_model(X, y, epochs=epochs, device=device)
-    inference_cpu = inference_latency_tf(model, np.repeat(X[:1], 256, axis=0), "cpu", runs=100)
+    model = train_tf_model(X, y, epochs=epochs, device=device, hidden=hidden)
+    probe = np.repeat(X[:1], min(256, max(len(X), 1)), axis=0)
+    inference_cpu = inference_latency_tf(model, probe, "cpu", runs=latency_runs)
 
     return BenchmarkResult(
         dataset=dataset_name,
@@ -186,61 +206,127 @@ def benchmark_model(
     )
 
 
-def main() -> int:
+def ensure_real_world_gate(results: list[BenchmarkResult]) -> None:
+    """Fail the process when a real-world benchmark result is unusable."""
+    problems: list[str] = []
+    if not results:
+        problems.append("no dataset results")
+    for row in results:
+        if row.params <= 0:
+            problems.append(f"{row.dataset}: no parameters")
+        for label, value in (
+            ("rmse_mean", row.rmse_mean),
+            ("rmse_std", row.rmse_std),
+            ("r2_mean", row.r2_mean),
+            ("r2_std", row.r2_std),
+            ("train_time_s", row.train_time_s),
+            ("inference_latency_cpu_ms", row.inference_latency_cpu_ms),
+        ):
+            if not math.isfinite(value):
+                problems.append(f"{row.dataset}: {label} is not finite ({value})")
+    if problems:
+        raise SystemExit("benchmark gate failed:\n- " + "\n- ".join(problems))
+
+
+def write_results_json(path: Path, results: list[BenchmarkResult]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "system": {
+            "platform": platform.platform(),
+            "cpu": cpu_info(),
+            "gpu": gpu_info(),
+            "tf_version": tf.__version__,
+        },
+        "note": (
+            "PyTorch benchmarks disabled on CPU-only environments due to "
+            "TensorFlow/PyTorch CUDA initialization conflicts"
+        ),
+        "results": [asdict(row) for row in results],
+    }
+    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Real-world tabular benchmark suite for KANX (TF only).")
     ap.add_argument("--device", choices=["cpu", "cuda", "auto"], default="auto")
-    ap.add_argument("--epochs", type=int, default=200)
+    ap.add_argument("--epochs", type=int, default=None)
     ap.add_argument(
         "--datasets",
         choices=["all", "california", "concrete", "energy"],
         default="all",
     )
-    args = ap.parse_args()
+    ap.add_argument(
+        "--smoke",
+        action="store_true",
+        help=(
+            "CPU smoke gate: California housing, 256 rows, 2 folds, 1 epoch. "
+            "Does not overwrite the committed results JSON."
+        ),
+    )
+    ap.add_argument(
+        "--output",
+        default=None,
+        help="Write JSON results here. Defaults to benchmarks/results/real_world_results.json except for --smoke.",
+    )
+    ap.add_argument("--folds", type=int, default=None)
+    ap.add_argument("--max-samples", type=int, default=None)
+    ap.add_argument("--hidden", type=int, default=None)
+    ap.add_argument("--latency-runs", type=int, default=None)
+    args = ap.parse_args(argv)
 
-    device = args.device
-    if device == "auto":
+    if args.smoke and args.device == "cuda":
+        ap.error("--smoke always runs on CPU")
+    if args.smoke:
+        device = "cpu"
+    elif args.device == "auto":
         device = "cuda" if tf.config.list_physical_devices("GPU") else "cpu"
+    else:
+        device = args.device
 
-    selected = [
-        "california",
-        "concrete",
-        "energy",
-    ] if args.datasets == "all" else [args.datasets]
+    epochs = args.epochs if args.epochs is not None else (1 if args.smoke else 200)
+    n_folds = args.folds if args.folds is not None else (2 if args.smoke else 5)
+    hidden = args.hidden if args.hidden is not None else (4 if args.smoke else 32)
+    latency_runs = args.latency_runs if args.latency_runs is not None else (2 if args.smoke else 100)
+    max_samples = args.max_samples if args.max_samples is not None else (256 if args.smoke else None)
+    if args.smoke and args.datasets == "all":
+        selected = ["california"]
+    elif args.datasets == "all":
+        selected = ["california", "concrete", "energy"]
+    else:
+        selected = [args.datasets]
 
     results: list[BenchmarkResult] = []
     for dataset_name in selected:
         print(f"Benchmarking {dataset_name} on device={device}...", flush=True)
-        X, y, feature_names = build_dataset(dataset_name)
-        n_features = X.shape[1]
+        X, y, _feature_names = build_dataset(dataset_name)
+        if max_samples is not None:
+            X = X[:max_samples]
+            y = y[:max_samples]
         results.append(
-            benchmark_model(
+            evaluate_dataset(
                 dataset_name,
-                n_features=n_features,
-                epochs=args.epochs,
+                X,
+                y,
+                epochs=epochs,
                 device=device,
+                n_folds=n_folds,
+                hidden=hidden,
+                latency_runs=latency_runs,
             )
         )
+    ensure_real_world_gate(results)
 
-    RESULTS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with open(RESULTS_PATH, "w") as f:
-        json.dump(
-            {
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "system": {
-                    "platform": platform.platform(),
-                    "cpu": cpu_info(),
-                    "gpu": gpu_info(),
-                    "tf_version": tf.__version__,
-                },
-                "note": "PyTorch benchmarks disabled on CPU-only environments due to TensorFlow/PyTorch CUDA initialization conflicts",
-                "results": [asdict(r) for r in results],
-            },
-            f,
-            indent=2,
-        )
-
+    if args.output is not None:
+        out = Path(args.output)
+    elif args.smoke:
+        out = None
+    else:
+        out = RESULTS_PATH
     print("\n" + summary_markdown(results))
-    print(f"\nResults saved to {RESULTS_PATH}")
+    if out is not None:
+        write_results_json(out, results)
+        print(f"\nResults saved to {out}")
     return 0
 
 

@@ -61,4 +61,15 @@ PYTHONPATH=src python benchmarks/compare_mlp.py --long  # convergence runs
 
 If running in CI where GPUs are available, ensure the runner has compatible CUDA drivers and `TORCH_INDUCTOR_DISABLE_TRITON` is unset so PyTorch GPU benchmarks run in the same job.
 
+## CPU smoke gate
+
+GitHub Actions job `benchmark-smoke` runs a tiny CPU configuration so a broken training path fails CI without the 100-epoch suite:
+
+```bash
+python benchmarks/compare_mlp.py --smoke
+python benchmarks/real_world.py --smoke
+```
+
+`--smoke` prints the metrics and, unless you pass `--output`, does not overwrite `benchmarks/results.md` or `benchmarks/results/real_world_results.json`. The real-world smoke loads the first 256 rows of California Housing and needs `scikit-learn`. The process exits non-zero when a metric is missing or non-finite.
+
 

@@ -144,6 +144,9 @@ are universally better than MLPs.
 
 Reproduce with `python benchmarks/compare_mlp.py` (quick, 100 epochs) or
 `python benchmarks/compare_mlp.py --long` (1000 epochs + early-stopping).
+CI also runs `python benchmarks/compare_mlp.py --smoke` and
+`python benchmarks/real_world.py --smoke` on CPU. Those commands do not
+rewrite the published tables.
 
 ---
 
@@ -157,7 +160,7 @@ Reproduce with `python benchmarks/compare_mlp.py` (quick, 100 epochs) or
 | REST API service  | ❌ | ❌ | ❌ | ✅ FastAPI |
 | Docker + K8s      | ❌ | ❌ | ❌ | ✅ |
 | Property-based tests | ❌ | ❌ | ❌ | ✅ Hypothesis |
-| Test coverage     | research | research | research | **94%** |
+| Test coverage     | research | research | research | **CI + Hypothesis** |
 | PyPI              | ✅ | ✅ | ✅ | ✅ |
 | CI/CD release pipeline | ❌ | ❌ | ❌ | ✅ PyPI + GHCR + Pages |
 

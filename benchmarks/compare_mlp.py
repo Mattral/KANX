@@ -9,12 +9,14 @@ Reproduce with::
 
     python benchmarks/compare_mlp.py             # quick run (100 epochs)
     python benchmarks/compare_mlp.py --long      # convergence run (1000 epochs + early-stop)
+    python benchmarks/compare_mlp.py --smoke     # CPU smoke gate (does not rewrite results.md)
 
 Outputs `benchmarks/results.md` with the full table + methodology.
 """
 from __future__ import annotations
 
 import argparse
+import math
 import os
 import platform
 import time
@@ -112,16 +114,33 @@ def fit_and_score(
     )
 
 
-def write_results(rows: list[Result], path: str, *, epochs: int, mode: str):
+def write_results(
+    rows: list[Result],
+    path: str,
+    *,
+    epochs: int,
+    mode: str,
+    n_train: int = 4096,
+    n_test: int = 1024,
+    batch_size: int = 128,
+):
+    if mode == "long":
+        reproduce = "`python benchmarks/compare_mlp.py --long`"
+    elif mode == "smoke":
+        reproduce = "`python benchmarks/compare_mlp.py --smoke`"
+    else:
+        reproduce = "`python benchmarks/compare_mlp.py`"
     with open(path, "w") as f:
         f.write("# Benchmark: KAN vs MLP — fair, multi-baseline\n\n")
-        f.write(f"> Reproduce with `python benchmarks/compare_mlp.py{' --long' if mode == 'long' else ''}`.\n\n")
+        if mode == "smoke":
+            f.write("CPU smoke gate. This file is not the published benchmark table.\n\n")
+        f.write(f"> Reproduce with {reproduce}.\n\n")
         f.write("## Setup\n\n")
         f.write("- **Target.** `y = sin(π·x₁) + cos(2π·x₂)` — *deliberately smooth & separable*; "
                 "this is the regime where KANs are theoretically optimal (Liu et al. 2024). "
                 "**Real-world targets are not this smooth.**\n")
-        f.write("- **Data.** 4 096 train / 1 024 test, uniform on `[-1, 1]²`, seed=0.\n")
-        f.write(f"- **Training.** Adam(lr=1e-2), batch=128, **{epochs} epochs**"
+        f.write(f"- **Data.** {n_train} train / {n_test} test, uniform on `[-1, 1]²`, seed=0.\n")
+        f.write(f"- **Training.** Adam(lr=1e-2), batch={batch_size}, **{epochs} epochs**"
                 f"{' with EarlyStopping(patience=50)' if mode == 'long' else ' (fixed)'}.\n")
         f.write(f"- **Hardware.** {platform.machine()} / {platform.system()} / "
                 f"Python {platform.python_version()} / TF {tf.__version__}, CPU.\n\n")
@@ -152,40 +171,126 @@ def write_results(rows: list[Result], path: str, *, epochs: int, mode: str):
                 "same-size KAN on both accuracy and throughput.\n")
 
 
-def main():
+def ensure_compare_gate(rows: list[Result]) -> None:
+    """Fail the process when a synthetic benchmark result is unusable."""
+    problems: list[str] = []
+    if not rows:
+        problems.append("no model results")
+    for row in rows:
+        if row.params <= 0:
+            problems.append(f"{row.model}: no parameters")
+        for label, value in (
+            ("train_mse", row.train_mse),
+            ("test_mse", row.test_mse),
+            ("train_s", row.train_s),
+            ("infer_ms_4k_cpu", row.infer_ms_4k_cpu),
+        ):
+            if not math.isfinite(value):
+                problems.append(f"{row.model}: {label} is not finite ({value})")
+    if problems:
+        raise SystemExit("benchmark gate failed:\n- " + "\n- ".join(problems))
+
+
+def run_compare(
+    *,
+    epochs: int,
+    patience: int,
+    n_train: int,
+    n_test: int,
+    batch_size: int,
+    smoke: bool,
+) -> list[Result]:
+    set_global_seed(0)
+    X, y = make_data(n_train, 0)
+    X_test, y_test = make_data(n_test, 1)
+    score_kwargs = {
+        "epochs": epochs,
+        "lr": 1e-2,
+        "batch_size": batch_size,
+        "early_stop_patience": patience,
+    }
+
+    if smoke:
+        specs = (
+            ("KAN[2,4,1]", KAN([2, 4, 1])),
+            ("MLP[2,8,1]", make_mlp(2, 8)),
+        )
+    else:
+        specs = (
+            ("KAN[2,16,1]", KAN([2, 16, 1])),
+            ("KAN[2,32,1]", KAN([2, 32, 1])),
+            ("MLP[2,32,1]", make_mlp(2, 32)),
+            ("MLP[2,16,16,1]", make_mlp(2, (16, 16))),
+            ("MLP[2,64,64,1]", make_mlp(2, (64, 64))),
+        )
+
+    rows = [
+        fit_and_score(name, model, X, y, X_test, y_test, **score_kwargs)
+        for name, model in specs
+    ]
+    ensure_compare_gate(rows)
+    return rows
+
+
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--long", action="store_true",
                     help="convergence run: 1000 epochs + early-stopping(50)")
-    args = ap.parse_args()
-    epochs = 1000 if args.long else 100
-    patience = 50 if args.long else 0
-    mode = "long" if args.long else "quick"
+    ap.add_argument(
+        "--smoke",
+        action="store_true",
+        help="CPU smoke gate: one epoch on a tiny KAN and MLP. Does not overwrite results.md.",
+    )
+    ap.add_argument(
+        "--output",
+        default=None,
+        help="Write the markdown table here. Defaults to benchmarks/results.md except for --smoke.",
+    )
+    args = ap.parse_args(argv)
+    if args.long and args.smoke:
+        ap.error("--smoke and --long cannot be combined")
 
-    set_global_seed(0)
-    X, y = make_data(4096, 0)
-    X_test, y_test = make_data(1024, 1)
+    if args.smoke:
+        epochs, patience, mode = 1, 0, "smoke"
+        n_train, n_test, batch_size = 128, 64, 32
+    elif args.long:
+        epochs, patience, mode = 1000, 50, "long"
+        n_train, n_test, batch_size = 4096, 1024, 128
+    else:
+        epochs, patience, mode = 100, 0, "quick"
+        n_train, n_test, batch_size = 4096, 1024, 128
 
-    rows: list[Result] = []
-    rows.append(fit_and_score("KAN[2,16,1]",      KAN([2, 16, 1]),       X, y, X_test, y_test,
-                              epochs=epochs, lr=1e-2, batch_size=128, early_stop_patience=patience))
-    rows.append(fit_and_score("KAN[2,32,1]",      KAN([2, 32, 1]),       X, y, X_test, y_test,
-                              epochs=epochs, lr=1e-2, batch_size=128, early_stop_patience=patience))
-    # Param-matched MLPs (~430 / ~870 params, same budget as the two KANs above).
-    rows.append(fit_and_score("MLP[2,32,1]",      make_mlp(2, 32),       X, y, X_test, y_test,
-                              epochs=epochs, lr=1e-2, batch_size=128, early_stop_patience=patience))
-    rows.append(fit_and_score("MLP[2,16,16,1]",   make_mlp(2, (16, 16)), X, y, X_test, y_test,
-                              epochs=epochs, lr=1e-2, batch_size=128, early_stop_patience=patience))
-    # The original (deliberately over-parameterised) reference point.
-    rows.append(fit_and_score("MLP[2,64,64,1]",   make_mlp(2, (64, 64)), X, y, X_test, y_test,
-                              epochs=epochs, lr=1e-2, batch_size=128, early_stop_patience=patience))
+    rows = run_compare(
+        epochs=epochs,
+        patience=patience,
+        n_train=n_train,
+        n_test=n_test,
+        batch_size=batch_size,
+        smoke=args.smoke,
+    )
 
-    here = os.path.dirname(os.path.abspath(__file__))
-    out = os.path.join(here, "results.md")
-    write_results(rows, out, epochs=epochs, mode=mode)
-    print(f"Wrote {out}")
-    for r in rows:
-        print(r)
+    if args.output is not None:
+        out = args.output
+    elif args.smoke:
+        out = None
+    else:
+        here = os.path.dirname(os.path.abspath(__file__))
+        out = os.path.join(here, "results.md")
+    if out is not None:
+        write_results(
+            rows,
+            out,
+            epochs=epochs,
+            mode=mode,
+            n_train=n_train,
+            n_test=n_test,
+            batch_size=batch_size,
+        )
+        print(f"Wrote {out}")
+    for row in rows:
+        print(row)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
