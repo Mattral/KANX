@@ -7,6 +7,7 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 ## [Unreleased]
 
 ### Added
+- **Edge pruning.** `KAN.prune()` and `KANLinear.prune()` on the TensorFlow, PyTorch, and MatrixKAN layers zero an edge when its score is at or below an absolute `threshold` and/or a `relative` fraction of the strongest edge in that layer. Pass `samples` to score each edge by the RMS of its contribution. Pruned spline coefficients and base weights are set to zero.
 - **CPU benchmark smoke gate.** `python benchmarks/compare_mlp.py --smoke` and `python benchmarks/real_world.py --smoke` train a tiny CPU configuration and exit non-zero when metrics are missing or non-finite. The `benchmark-smoke` GitHub Actions job runs both commands. Smoke mode writes only to `--output` and leaves the committed baseline artifacts in place.
 - `load_california_housing()` now loads NumPy arrays directly, so the real-world smoke gate needs scikit-learn and does not need pandas.
 

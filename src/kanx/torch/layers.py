@@ -11,6 +11,8 @@ from __future__ import annotations
 import torch
 from torch import nn
 
+from ..prune import keep_mask, prune_stats
+
 
 # ---------------------------------------------------------------------------
 def extend_grid(grid: torch.Tensor, k: int) -> torch.Tensor:
@@ -133,6 +135,39 @@ class KANLinear(nn.Module):
         spline_out = torch.einsum("bik,iok->bo", basis, self.spline_weight)
         return base_out + spline_out
 
+    def prune(
+        self,
+        *,
+        threshold: float | None = None,
+        relative: float | None = None,
+        samples=None,
+    ) -> dict[str, int]:
+        """Zero edges that are small in magnitude or in contribution.
+
+        See :meth:`kanx.layers.KANLinear.prune`. ``samples``, when given, has
+        shape ``(batch, in_features)``.
+        """
+        batch = _as_prune_samples(samples, self.in_features, self.spline_weight)
+        scores = self._edge_scores(batch)
+        keep = keep_mask(scores, threshold=threshold, relative=relative)
+        _apply_keep(self.spline_weight, self.base_weight, keep)
+        return prune_stats(keep)
+
+    def _edge_scores(self, samples: torch.Tensor | None):
+        spline = self.spline_weight.detach()
+        base = self.base_weight.detach()
+        if samples is None:
+            squared = spline.float().pow(2).sum(dim=-1) + base.float().pow(2)
+            return torch.sqrt(squared.clamp_min(0)).cpu().numpy()
+
+        acted = self.base_activation(samples)
+        grid_ext = extend_grid(self.grid, self.spline_order)
+        basis = b_spline_basis(samples, grid_ext, self.spline_order)
+        spline_edge = torch.einsum("bik,iok->bio", basis, spline)
+        base_edge = acted.unsqueeze(-1) * base.unsqueeze(0)
+        mean_sq = (spline_edge + base_edge).float().pow(2).mean(dim=0)
+        return torch.sqrt(mean_sq.clamp_min(0)).cpu().numpy()
+
     def update_grid_from_samples(self, x: torch.Tensor, margin: float = 0.01) -> None:
         """Adaptive grid update from data samples (pykan parity).
 
@@ -181,6 +216,31 @@ class KANLinear(nn.Module):
             f"grid_size={self.grid_size}, spline_order={self.spline_order}, "
             f"activation={self.base_activation_name}"
         )
+
+
+def _as_prune_samples(samples, in_features: int, like: torch.Tensor) -> torch.Tensor | None:
+    """Validate an optional ``(batch, in_features)`` scoring batch."""
+    if samples is None:
+        return None
+    if not torch.is_tensor(samples):
+        batch = torch.as_tensor(samples, dtype=like.dtype, device=like.device)
+    else:
+        batch = samples.to(device=like.device, dtype=like.dtype)
+    if batch.ndim != 2 or int(batch.shape[-1]) != in_features:
+        raise ValueError(
+            f"samples must have shape (batch, {in_features}), got {tuple(batch.shape)}"
+        )
+    if int(batch.shape[0]) == 0:
+        raise ValueError("samples must contain at least one row")
+    return batch
+
+
+def _apply_keep(spline: torch.Tensor, base: torch.Tensor, keep) -> None:
+    """Zero pruned edges in place. ``keep`` is shaped ``(in_features, out_features)``."""
+    mask = torch.as_tensor(keep, device=spline.device, dtype=spline.dtype)
+    with torch.no_grad():
+        spline.mul_(mask.unsqueeze(-1))
+        base.mul_(mask.to(dtype=base.dtype))
 
 
 def _resolve_activation(name: str):

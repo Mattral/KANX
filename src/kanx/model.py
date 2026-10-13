@@ -120,6 +120,47 @@ class KAN(tf.keras.Sequential):
             # propagate forward for next layer
             current_x = layer(current_x)
 
+    def prune(
+        self,
+        *,
+        threshold: float | None = None,
+        relative: float | None = None,
+        samples=None,
+    ) -> dict[str, int]:
+        """Prune low-magnitude edges on every ``KANLinear`` layer.
+
+        ``threshold`` and ``relative`` are forwarded to each layer. When
+        ``samples`` has shape ``(batch, in_features)``, each layer is scored
+        on the activations it actually receives, and later layers see the
+        pruned outputs of earlier ones.
+
+        Returns total ``pruned``, ``total``, and ``active`` edge counts.
+        """
+        kan_layers = [layer for layer in self.layers if isinstance(layer, KANLinear)]
+        if not kan_layers:
+            return {"pruned": 0, "total": 0, "active": 0}
+        if not self.built:
+            width = int(kan_layers[0].in_features)
+            self(tf.zeros((1, width), dtype=tf.float32), training=False)
+
+        current = None
+        if samples is not None:
+            current = tf.convert_to_tensor(samples, dtype=tf.float32)
+            if current.shape.rank != 2:
+                raise ValueError(
+                    f"samples must have shape (batch, in_features), got {tuple(current.shape)}"
+                )
+
+        pruned = 0
+        total = 0
+        for layer in kan_layers:
+            stats = layer.prune(threshold=threshold, relative=relative, samples=current)
+            pruned += stats["pruned"]
+            total += stats["total"]
+            if current is not None:
+                current = layer(current, training=False)
+        return {"pruned": pruned, "total": total, "active": total - pruned}
+
     def get_config(self):
         return {
             "layers": list(self._layers_spec),

@@ -45,7 +45,6 @@ Open a draft PR early. We'd rather discuss with code in front of us!
 
 ### High-leverage ideas (currently unowned)
 
-- Pruning / sparsification of unused edges — next
 - PyTorch subprocess benchmark wrapper for GPU runners — next
 - Mixed precision and XLA on the spline einsum — next
 - JAX backend (third parallel surface) — P1

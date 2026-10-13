@@ -26,9 +26,12 @@ Design notes
 """
 from __future__ import annotations
 
+import numpy as np
 import tensorflow as tf
 from tensorflow.keras import initializers, regularizers
 from tensorflow.keras.layers import Layer
+
+from .prune import keep_mask, prune_stats
 
 
 # ----------------------------------------------------------------------------
@@ -112,6 +115,20 @@ def b_spline_basis(x: tf.Tensor, grid_ext: tf.Tensor, k: int) -> tf.Tensor:
         basis = left_w * basis[..., :L] + right_w * basis[..., 1 : L + 1]
 
     return basis
+
+
+def _as_prune_samples(samples, in_features: int, dtype) -> tf.Tensor | None:
+    """Validate an optional ``(batch, in_features)`` scoring batch."""
+    if samples is None:
+        return None
+    batch = tf.convert_to_tensor(samples, dtype=dtype)
+    if batch.shape.rank != 2 or int(batch.shape[-1]) != in_features:
+        raise ValueError(
+            f"samples must have shape (batch, {in_features}), got {tuple(batch.shape)}"
+        )
+    if int(batch.shape[0]) == 0:
+        raise ValueError("samples must contain at least one row")
+    return batch
 
 
 # ----------------------------------------------------------------------------
@@ -211,10 +228,9 @@ class KANLinear(Layer):
         )
 
         # Per-feature uniform grid of `grid_size + 1` knots.
-        import numpy as _np
         low, high = self.grid_range
-        grid_init = _np.linspace(low, high, self.grid_size + 1, dtype=_np.float32)
-        grid_init = _np.tile(grid_init[None, :], (self.in_features, 1))
+        grid_init = np.linspace(low, high, self.grid_size + 1, dtype=np.float32)
+        grid_init = np.tile(grid_init[None, :], (self.in_features, 1))
         self.grid = self.add_weight(
             name="grid",
             shape=(self.in_features, self.grid_size + 1),
@@ -257,6 +273,51 @@ class KANLinear(Layer):
             }
         )
         return config
+
+    def prune(
+        self,
+        *,
+        threshold: float | None = None,
+        relative: float | None = None,
+        samples: tf.Tensor | np.ndarray | None = None,
+    ) -> dict[str, int]:
+        """Zero edges that are small in magnitude or in contribution.
+
+        An edge is one ``(input feature, output feature)`` pair: its spline
+        coefficients and its base weight. ``threshold`` is an absolute cutoff
+        on the edge score. ``relative`` drops edges at or below that fraction
+        of the strongest edge in this layer. Pass either argument, or both
+        (the higher cutoff wins).
+
+        The score is the RMS of the edge function on ``samples`` when a batch
+        of shape ``(batch, in_features)`` is given. Otherwise it is the L2
+        norm of the edge parameters. The layer must already be built.
+        """
+        if not self.built:
+            raise ValueError("KANLinear.prune() requires a built layer")
+        batch = _as_prune_samples(samples, self.in_features, self.spline_weight.dtype)
+        scores = self._edge_scores(batch)
+        keep = keep_mask(scores, threshold=threshold, relative=relative)
+        mask = tf.constant(keep)
+        dtype = self.spline_weight.dtype
+        self.spline_weight.assign(self.spline_weight * tf.cast(mask[..., None], dtype))
+        self.base_weight.assign(self.base_weight * tf.cast(mask, self.base_weight.dtype))
+        return prune_stats(keep)
+
+    def _edge_scores(self, samples: tf.Tensor | None) -> np.ndarray:
+        spline = tf.cast(self.spline_weight, tf.float64)
+        base = tf.cast(self.base_weight, tf.float64)
+        if samples is None:
+            squared = tf.reduce_sum(tf.square(spline), axis=-1) + tf.square(base)
+            return tf.sqrt(tf.maximum(squared, 0.0)).numpy()
+
+        acted = tf.cast(self.base_activation(samples), tf.float64)
+        grid_ext = extend_grid(tf.cast(self.grid, tf.float64), self.spline_order)
+        basis = b_spline_basis(tf.cast(samples, tf.float64), grid_ext, self.spline_order)
+        spline_edge = tf.einsum("bik,iok->bio", basis, spline)
+        base_edge = acted[..., None] * base[None, :, :]
+        mean_sq = tf.reduce_mean(tf.square(spline_edge + base_edge), axis=0)
+        return tf.sqrt(tf.maximum(mean_sq, 0.0)).numpy()
 
     def update_grid_from_samples(self, x: tf.Tensor, margin: float = 0.01) -> None:
         """Adaptive grid update from data samples (pykan parity).

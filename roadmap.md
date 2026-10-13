@@ -94,6 +94,7 @@ Prometheus. 0.1.9 fixed multi-layer grid updates and the Docker image.
 - ✅ **TensorBoard** on both training paths (`python -m kanx train --tensorboard`)
 - ✅ **Prometheus** scrape endpoint at `GET /metrics` in the FastAPI service
 - ✅ **CPU benchmark smoke gate**: `benchmarks/compare_mlp.py --smoke` and `benchmarks/real_world.py --smoke`, run from the `benchmark-smoke` GitHub Actions job. Smoke runs do not overwrite the committed baseline artifacts.
+- ✅ **Edge pruning** on TensorFlow `KAN`, PyTorch `KAN`, and `MatrixKAN`: `prune(threshold=..., relative=..., samples=...)` zeros low-magnitude or low-contribution edges
 
 ### Infrastructure & quality
 - ✅ **CITATION.cff** (CFF v1.2.0 format) — machine-readable citation for academic attribution
@@ -112,7 +113,6 @@ Prometheus. 0.1.9 fixed multi-layer grid updates and the Docker image.
 ## 🟡 Next iteration
 
 - [ ] **PyTorch subprocess benchmark wrapper**: Run PyTorch benchmarks in a separate process on GPU runners to avoid a TensorFlow+PyTorch segfault
-- [ ] **Pruning / sparsification** to drop unused edges
 - [ ] **Mixed precision** + XLA JIT on the spline einsum
 
 ## 🔵 Backlog (P1)

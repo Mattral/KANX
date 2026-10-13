@@ -128,6 +128,13 @@ model.predict([[0.5, 0.2]])                     # → array([[1.04…]])
 > 
 > `kanx.check_input_range(model, X)` will log a warning at inference if input exceeds the grid.
 
+Drop edges that barely contribute. `threshold` is an absolute cutoff on the edge score. `relative` drops edges at or below that fraction of the strongest edge in the same layer. Pass `samples` to score each edge by its RMS on real inputs. The same method is on the PyTorch `KAN` and on `MatrixKAN`.
+
+```python
+model.prune(relative=0.01)                  # keep edges above 1% of the peak
+model.prune(threshold=1e-3, samples=X_train)
+```
+
 ---
 
 Want more control? Same simplicity, your data:

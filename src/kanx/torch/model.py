@@ -145,6 +145,40 @@ class KAN(nn.Sequential):
                 # propagate forward for next layer
                 current_x = layer(current_x)
 
+    def prune(
+        self,
+        *,
+        threshold: float | None = None,
+        relative: float | None = None,
+        samples=None,
+    ) -> dict[str, int]:
+        """Prune low-magnitude edges on every ``KANLinear`` layer.
+
+        ``threshold`` and ``relative`` match :meth:`kanx.torch.layers.KANLinear.prune`.
+        When ``samples`` is provided, each layer is scored on the batch it
+        receives after earlier layers have been pruned.
+        """
+        kan_layers = [layer for layer in self.modules() if isinstance(layer, KANLinear)]
+        if not kan_layers:
+            return {"pruned": 0, "total": 0, "active": 0}
+
+        current = None if samples is None else _as_tensor(samples)
+        if current is not None and current.ndim != 2:
+            raise ValueError(
+                f"samples must have shape (batch, in_features), got {tuple(current.shape)}"
+            )
+
+        pruned = 0
+        total = 0
+        with torch.no_grad():
+            for layer in kan_layers:
+                stats = layer.prune(threshold=threshold, relative=relative, samples=current)
+                pruned += stats["pruned"]
+                total += stats["total"]
+                if current is not None:
+                    current = layer(current)
+        return {"pruned": pruned, "total": total, "active": total - pruned}
+
     def save(self, path: str) -> str:
         """Save state_dict + architecture spec to a single .pt file."""
         torch.save(

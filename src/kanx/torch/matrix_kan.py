@@ -10,6 +10,9 @@ from __future__ import annotations
 import torch
 from torch import nn
 
+from ..prune import keep_mask, prune_stats
+from .layers import _apply_keep, _as_prune_samples
+
 
 def extend_grid_matrix(grid: torch.Tensor, k: int) -> torch.Tensor:
     """Symmetrically extend uniform grid: (in_features, grid_size + 1) → (in_features, grid_size + 2k + 1)."""
@@ -199,6 +202,41 @@ class MatrixKANLinear(nn.Module):
 
         return base_out + spline_out
 
+    def prune(
+        self,
+        *,
+        threshold: float | None = None,
+        relative: float | None = None,
+        samples: torch.Tensor | None = None,
+    ) -> dict[str, int]:
+        """Zero edges that are small in magnitude or in contribution.
+
+        Scoring matches :meth:`forward`, including ``scale_base`` and
+        ``scale_spline``. ``samples``, when given, has shape
+        ``(batch, in_features)``.
+        """
+        batch = _as_prune_samples(samples, self.in_features, self.spline_weight)
+        scores = self._edge_scores(batch)
+        keep = keep_mask(scores, threshold=threshold, relative=relative)
+        _apply_keep(self.spline_weight, self.base_weight, keep)
+        return prune_stats(keep)
+
+    def _edge_scores(self, samples: torch.Tensor | None):
+        spline = self.spline_weight.detach()
+        base = self.base_weight.detach()
+        if samples is None:
+            squared = (self.scale_spline ** 2) * spline.float().pow(2).sum(dim=-1)
+            squared = squared + (self.scale_base ** 2) * base.float().pow(2)
+            return torch.sqrt(squared.clamp_min(0)).cpu().numpy()
+
+        acted = self.base_activation(samples)
+        grid_ext = extend_grid_matrix(self.grid, self.spline_order)
+        basis = b_spline_basis_matrix(samples, grid_ext, self.spline_order)
+        spline_edge = torch.einsum("bik,iok->bio", basis, spline) * self.scale_spline
+        base_edge = acted.unsqueeze(-1) * base.unsqueeze(0) * self.scale_base
+        mean_sq = (spline_edge + base_edge).float().pow(2).mean(dim=0)
+        return torch.sqrt(mean_sq.clamp_min(0)).cpu().numpy()
+
     def update_grid_from_samples(self, x: torch.Tensor, margin: float = 0.01) -> None:
         """Adaptive grid update from data samples (pykan parity).
 
@@ -307,3 +345,32 @@ class MatrixKAN(nn.Sequential):
                     current_x = layers[j](current_x)
                 # Update this layer
                 layers[i].update_grid_from_samples(current_x, margin=margin)
+
+    def prune(
+        self,
+        *,
+        threshold: float | None = None,
+        relative: float | None = None,
+        samples: torch.Tensor | None = None,
+    ) -> dict[str, int]:
+        """Prune every ``MatrixKANLinear`` layer. See :meth:`MatrixKANLinear.prune`."""
+        layers = [module for module in self.modules() if isinstance(module, MatrixKANLinear)]
+        if not layers:
+            return {"pruned": 0, "total": 0, "active": 0}
+
+        current = None if samples is None else torch.as_tensor(samples, dtype=torch.float32)
+        if current is not None and current.ndim != 2:
+            raise ValueError(
+                f"samples must have shape (batch, in_features), got {tuple(current.shape)}"
+            )
+
+        pruned = 0
+        total = 0
+        with torch.no_grad():
+            for layer in layers:
+                stats = layer.prune(threshold=threshold, relative=relative, samples=current)
+                pruned += stats["pruned"]
+                total += stats["total"]
+                if current is not None:
+                    current = layer(current)
+        return {"pruned": pruned, "total": total, "active": total - pruned}
