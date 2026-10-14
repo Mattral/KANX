@@ -6,6 +6,10 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+
+- The quickstart notebook shows edge pruning, `kanx.viz` edge plots, and a short TensorFlow mixed-precision + XLA fit. The install cell includes `kanx[viz]`.
+
 ## [0.2.0] - 2026-10-14
 
 ### Added
