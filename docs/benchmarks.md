@@ -48,8 +48,10 @@ Full results (JSON) and system metadata are saved as an artifact in the reposito
 - [benchmarks/results/real_world_results.json](benchmarks/results/real_world_results.json)
 
 Notes:
-- These experiments were run on a CPU-only environment; GPU timings and PyTorch runs are available when running on machines with compatible CUDA drivers.
-- The benchmark script used: `benchmarks/real_world.py` (TensorFlow-only mode on CPU).
+- These experiments were run on a CPU-only environment, so the committed table is TensorFlow-only.
+- On a GPU machine, `python benchmarks/real_world.py --device cuda` still trains the TensorFlow KAN in this process and trains the PyTorch KAN and MLP in `benchmarks/torch_worker.py`. The child does not import TensorFlow, which avoids the TensorFlow + PyTorch CUDA segfault.
+- `benchmarks/compare_mlp.py` never imports PyTorch, so that comparison stays in-process.
+- CPU runs and `--smoke` do not start the PyTorch child.
 
 GPU timing note:
 - The micro-benchmarks now record both CPU and GPU inference latencies where available. Run the canonical benchmark on a CUDA-enabled host to populate the `Infer 4k GPU (ms)` column:
@@ -59,7 +61,7 @@ PYTHONPATH=src python benchmarks/compare_mlp.py    # CPU-only or GPU if availabl
 PYTHONPATH=src python benchmarks/compare_mlp.py --long  # convergence runs
 ```
 
-If running in CI where GPUs are available, ensure the runner has compatible CUDA drivers and `TORCH_INDUCTOR_DISABLE_TRITON` is unset so PyTorch GPU benchmarks run in the same job.
+On a CUDA runner, `benchmarks/real_world.py --device cuda` starts the PyTorch models in a separate process. `compare_mlp.py` only times the TensorFlow GPU when TensorFlow can see one.
 
 ## CPU smoke gate
 

@@ -1,11 +1,9 @@
 """Real-world tabular benchmark suite for KANX.
 
-This script trains and evaluates TF and PyTorch KAN models plus a PyTorch
-MLP baseline on UCI tabular regression datasets.
-
-NOTE: Due to CUDA driver initialization conflicts between TensorFlow and PyTorch
-on CPU-only environments, this benchmark runs TensorFlow benchmarks only.
-PyTorch benchmarks can be run separately or on systems with proper CUDA support.
+TensorFlow trains in this process. When the run is on a GPU, the PyTorch KAN
+and a PyTorch MLP train in ``benchmarks/torch_worker.py`` so the two
+libraries do not initialize CUDA together. CPU runs and ``--smoke`` stay
+TensorFlow-only.
 
 Run with:
     python benchmarks/real_world.py --datasets california --epochs 3
@@ -17,6 +15,9 @@ import argparse
 import json
 import math
 import platform
+import subprocess
+import sys
+import tempfile
 import time
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
@@ -140,14 +141,18 @@ def build_dataset(name: str) -> tuple[np.ndarray, np.ndarray, list[str]]:
 
 def summary_markdown(results: list[BenchmarkResult]) -> str:
     lines = [
-        "| Dataset | Model | Params | Train (s) | RMSE mean ± std | R² mean ± std | CPU latency (ms) |",
-        "|---|---|---:|---:|---|---|---:|",
+        "| Dataset | Model | Params | Train (s) | RMSE mean ± std | R² mean ± std | CPU latency (ms) | GPU latency (ms) |",
+        "|---|---|---:|---:|---|---|---:|---:|",
     ]
     for r in results:
+        if r.inference_latency_gpu_ms is None:
+            gpu = "N/A"
+        else:
+            gpu = f"{r.inference_latency_gpu_ms:.2f}"
         lines.append(
             f"| {r.dataset} | {r.model} | {r.params} | {r.train_time_s:.2f} | "
             f"{r.rmse_mean:.4f} ± {r.rmse_std:.4f} | {r.r2_mean:.4f} ± {r.r2_std:.4f} | "
-            f"{r.inference_latency_cpu_ms:.2f} |"
+            f"{r.inference_latency_cpu_ms:.2f} | {gpu} |"
         )
     return "\n".join(lines)
 
@@ -224,11 +229,75 @@ def ensure_real_world_gate(results: list[BenchmarkResult]) -> None:
         ):
             if not math.isfinite(value):
                 problems.append(f"{row.dataset}: {label} is not finite ({value})")
+        if row.inference_latency_gpu_ms is not None and not math.isfinite(
+            row.inference_latency_gpu_ms
+        ):
+            problems.append(
+                f"{row.dataset}: inference_latency_gpu_ms is not finite "
+                f"({row.inference_latency_gpu_ms})"
+            )
     if problems:
         raise SystemExit("benchmark gate failed:\n- " + "\n- ".join(problems))
 
 
-def write_results_json(path: Path, results: list[BenchmarkResult]) -> None:
+def launch_torch_worker(config: dict, data_path: Path) -> list[BenchmarkResult]:
+    """Run ``torch_worker.py`` and return its rows.
+
+    The child must not import TensorFlow. ``config['device']`` is ``cuda``
+    for a GPU benchmark and ``cpu`` for the protocol test.
+    """
+    worker = Path(__file__).resolve().parent / "torch_worker.py"
+    config_path = data_path.with_name("torch_job.json")
+    config_path.write_text(json.dumps(config), encoding="utf-8")
+    proc = subprocess.run(
+        [sys.executable, str(worker), "--config", str(config_path), "--data", str(data_path)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        detail = (proc.stderr or proc.stdout or "").strip()
+        raise SystemExit("PyTorch benchmark subprocess failed:\n" + detail)
+    try:
+        payload = json.loads(proc.stdout)
+    except json.JSONDecodeError as exc:
+        raise SystemExit(f"PyTorch benchmark subprocess returned invalid JSON: {exc}") from exc
+    if payload.get("tensorflow_imported"):
+        raise SystemExit("PyTorch benchmark subprocess imported TensorFlow")
+    rows = [BenchmarkResult(**item) for item in payload["results"]]
+    if config.get("device") == "cuda":
+        missing = [row.model for row in rows if row.inference_latency_gpu_ms is None]
+        if missing:
+            raise SystemExit("PyTorch GPU latency missing for " + ", ".join(missing))
+    return rows
+
+
+def run_torch_subprocess(
+    dataset: str,
+    X: np.ndarray,
+    y: np.ndarray,
+    *,
+    epochs: int,
+    n_folds: int,
+    hidden: int,
+    latency_runs: int,
+) -> list[BenchmarkResult]:
+    """Train the PyTorch models in a child process on CUDA."""
+    config = {
+        "dataset": dataset,
+        "epochs": epochs,
+        "n_folds": n_folds,
+        "hidden": hidden,
+        "latency_runs": latency_runs,
+        "device": "cuda",
+    }
+    with tempfile.TemporaryDirectory() as tmp:
+        data_path = Path(tmp) / "arrays.npz"
+        np.savez(data_path, X=np.asarray(X, dtype=np.float32), y=np.asarray(y, dtype=np.float32))
+        return launch_torch_worker(config, data_path)
+
+
+def write_results_json(path: Path, results: list[BenchmarkResult], *, pytorch: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -238,17 +307,19 @@ def write_results_json(path: Path, results: list[BenchmarkResult]) -> None:
             "gpu": gpu_info(),
             "tf_version": tf.__version__,
         },
-        "note": (
-            "PyTorch benchmarks disabled on CPU-only environments due to "
-            "TensorFlow/PyTorch CUDA initialization conflicts"
-        ),
+        "note": pytorch,
         "results": [asdict(row) for row in results],
     }
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description="Real-world tabular benchmark suite for KANX (TF only).")
+    ap = argparse.ArgumentParser(
+        description=(
+            "Real-world tabular benchmark suite for KANX. "
+            "PyTorch runs in a subprocess when --device cuda is selected."
+        )
+    )
     ap.add_argument("--device", choices=["cpu", "cuda", "auto"], default="auto")
     ap.add_argument("--epochs", type=int, default=None)
     ap.add_argument(
@@ -315,6 +386,18 @@ def main(argv: list[str] | None = None) -> int:
                 latency_runs=latency_runs,
             )
         )
+        if device == "cuda":
+            results.extend(
+                run_torch_subprocess(
+                    dataset_name,
+                    X,
+                    y,
+                    epochs=epochs,
+                    n_folds=n_folds,
+                    hidden=hidden,
+                    latency_runs=latency_runs,
+                )
+            )
     ensure_real_world_gate(results)
 
     if args.output is not None:
@@ -325,7 +408,17 @@ def main(argv: list[str] | None = None) -> int:
         out = RESULTS_PATH
     print("\n" + summary_markdown(results))
     if out is not None:
-        write_results_json(out, results)
+        if device == "cuda":
+            pytorch = (
+                "PyTorch KAN and MLP ran in a subprocess so TensorFlow and "
+                "PyTorch did not initialize CUDA in one process."
+            )
+        else:
+            pytorch = (
+                "CPU run is TensorFlow-only. Pass --device cuda to run the "
+                "PyTorch KAN and MLP in a subprocess."
+            )
+        write_results_json(out, results, pytorch=pytorch)
         print(f"\nResults saved to {out}")
     return 0
 
