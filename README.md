@@ -354,7 +354,7 @@ python -m kanx predict --checkpoint model.keras --input X.json
 - **Numerical contracts**: ONNX parity within 1e-5, save/load roundtrip identity
 - **Performance regression alarms**: latency budgets on forward pass and predict
 - CI: Python 3.10 / 3.11 / 3.12, lint, Docker smoke, MkDocs, and a CPU benchmark smoke gate
-- CPU run of `pytest tests/ --ignore=tests/test_e2e_live.py`: **160 passed, 4 skipped** (Helm render checks when `helm` is not installed, and MatrixKAN CUDA checks). Branch coverage of `src/kanx` on that run is **77%** (`layers.py` 95%, `model.py` 91%). The older 94% / 113-test figures described a smaller suite.
+- CPU run of `pytest tests/ --ignore=tests/test_e2e_live.py`: **162 passed, 4 skipped** (Helm render checks when `helm` is not installed, and MatrixKAN CUDA checks). Branch coverage of `src/kanx` on that run is **77%** (`layers.py` 95%, `model.py` 91%). The older 94% / 113-test figures described a smaller suite. The distributed smoke in that count runs `MirroredStrategy` on two logical CPUs and `torch.distributed` with two gloo processes when no GPU is present.
 
 ```bash
 pytest tests/ -v --cov=src/kanx

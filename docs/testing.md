@@ -22,7 +22,7 @@
 * **End-to-end (7 tests)** — FastAPI TestClient hits `/api/{health,info,
   predict,load,reset}` with valid and invalid payloads.
 
-A CPU run that skips `tests/test_e2e_live.py` passes **160** tests and skips 4 (Helm template checks when `helm` is not on PATH, and MatrixKAN CUDA checks). The counts above are the original pyramid, not the current file list.
+A CPU run that skips `tests/test_e2e_live.py` passes **162** tests and skips 4 (Helm template checks when `helm` is not on PATH, and MatrixKAN CUDA checks). The counts above are the original pyramid, not the current file list.
 
 ## Conventions
 
@@ -61,6 +61,18 @@ coverage of `src/kanx` is **77%** on the CPU run above. `layers.py` is 95%
 and `model.py` is 91%. The optional Feynman and tabular loaders are the
 largest gaps.
 
+## Distributed smoke
+
+`tests/test_distributed_smoke.py` is part of the pytest CI job. It trains a tiny TensorFlow KAN for one epoch under `tf.distribute.MirroredStrategy`, and a tiny PyTorch KAN for one step under `torch.distributed`.
+
+With no GPU, TensorFlow uses two logical CPUs and PyTorch uses two gloo processes. Two or more GPUs use those devices. If logical CPUs cannot be configured, the TensorFlow script falls back to `OneDeviceStrategy` on one CPU.
+
+```bash
+pytest tests/test_distributed_smoke.py -q
+python tests/distributed_smoke_tf.py
+python tests/distributed_smoke_torch.py
+```
+
 ## Running tests
 
 ```bash
@@ -71,8 +83,7 @@ pytest -k partition_of_unity     # one test
 
 ## What is *not* tested
 
-* GPU codepaths — the library inherits TF's GPU support but the CI runners
-  are CPU-only. GPU smoke tests are listed in `roadmap.md`.
+* A multi-GPU machine in CI. The runners are CPU-only, so the distributed smoke uses logical CPUs and gloo. A host with two GPUs takes the GPU path instead.
 * Long-running MNIST convergence — `examples/mnist_train.py` exists as a
   reproducible script; we don't gate CI on its accuracy.
 * Docker image — built and smoke-tested in CI but only as a separate job;
