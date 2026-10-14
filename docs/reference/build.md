@@ -24,7 +24,7 @@ bash scripts/test.sh
 pytest tests/ -v --cov=src/kanx
 ```
 
-Expected: **113 passed, ~94% coverage** on the library.
+Expected on CPU, ignoring `tests/test_e2e_live.py`: **160 passed, 4 skipped** when Helm and CUDA are unavailable. Branch coverage of `src/kanx` is **77%**.
 
 ## Train from the CLI
 

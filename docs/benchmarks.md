@@ -33,7 +33,7 @@
 
 ## Real-world tabular benchmarks (new)
 
-We ran 5-fold cross-validated real-world tabular benchmarks on three UCI datasets (California Housing, Concrete Strength, Energy Efficiency) using the TensorFlow KAN implementation. PyTorch benchmarks are disabled on CPU-only environments due to TensorFlow/PyTorch CUDA initialization conflicts; see the benchmark artifact for full details.
+We ran 5-fold cross-validated real-world tabular benchmarks on three UCI datasets (California Housing, Concrete Strength, Energy Efficiency). CPU runs stay on the TensorFlow KAN. `python benchmarks/real_world.py --device cuda` trains the PyTorch KAN and MLP in a child process so TensorFlow and PyTorch do not initialize CUDA together.
 
 Summary (median across folds):
 

@@ -22,10 +22,6 @@
 
 </p>
 
-<p align="center">
-  <img src="docs/assets/benchmark.png" alt="KAN vs MLP benchmark" width="720"/>
-</p>
-
 > **`pip install kanx`** &nbsp;·&nbsp; A small KAN beats a 10× larger MLP on smooth, separable targets — **honest, param-matched benchmark below.**
 > One library. Two backends. Real ONNX export. Docker + Kubernetes ready. Prometheus metrics, TensorBoard logging, Hub and symbolic extras are now implemented.
 
@@ -78,6 +74,10 @@ Synthetic 2-D regression target `y = sin(π·x₁) + cos(2π·x₂)`,
 
 </div>
 
+<p align="center">
+  <img src="docs/assets/benchmark.png" alt="Test MSE for the published KAN and MLP runs" width="720"/>
+</p>
+
 **Honest read.** The smallest KAN (432 params) wins on this smooth separable
 target. The same KAN is ~10–15× *slower at inference* than a same-MSE MLP
 because each edge does a B-spline evaluation. On non-smooth or
@@ -93,6 +93,8 @@ CI runs a CPU smoke gate that does not rewrite the published tables:
 python benchmarks/compare_mlp.py --smoke
 python benchmarks/real_world.py --smoke   # needs scikit-learn for California housing
 ```
+
+`python benchmarks/real_world.py --device cuda` trains the PyTorch KAN and MLP in a child process, so TensorFlow and PyTorch do not initialize CUDA in one process. CPU runs and `--smoke` stay TensorFlow-only.
 
 ---
 
@@ -143,6 +145,12 @@ from kanx.viz import plot_edges, write_edge_viewer
 plot_edges(model, path="edges.png")
 write_edge_viewer(model, "edges.html")
 ```
+
+<p align="center">
+  <img src="docs/assets/edge_functions.png" alt="Learned edge functions on a two-input KAN" width="640"/>
+</p>
+
+Layer 0 of a `KAN([2, 1])` fit to `sin(π x₁) + 0.6 x₂²`. The first edge carries the sine. The second carries the quadratic.
 
 The TensorFlow spline contraction can run in reduced precision, and the forward pass can be XLA-compiled. Weights and the returned tensor stay float32. The Cox-de Boor basis stays float32 as well: knot differences underflow in float16.
 
@@ -346,6 +354,7 @@ python -m kanx predict --checkpoint model.keras --input X.json
 - **Numerical contracts**: ONNX parity within 1e-5, save/load roundtrip identity
 - **Performance regression alarms**: latency budgets on forward pass and predict
 - CI: Python 3.10 / 3.11 / 3.12, lint, Docker smoke, MkDocs, and a CPU benchmark smoke gate
+- CPU run of `pytest tests/ --ignore=tests/test_e2e_live.py`: **160 passed, 4 skipped** (Helm render checks when `helm` is not installed, and MatrixKAN CUDA checks). Branch coverage of `src/kanx` on that run is **77%** (`layers.py` 95%, `model.py` 91%). The older 94% / 113-test figures described a smaller suite.
 
 ```bash
 pytest tests/ -v --cov=src/kanx
