@@ -31,7 +31,8 @@ Single source of truth for what's shipped and what's next.
 - ✅ Supervisor-managed deployment via `backend/server.py`
 
 ### Quality
-- ✅ **160 tests passed** on a CPU run that skips `tests/test_e2e_live.py`, with 4 skips when Helm and CUDA are absent
+- ✅ **162 tests passed** on a CPU run that skips `tests/test_e2e_live.py`, with 4 skips when Helm and CUDA are absent
+- ✅ **Distributed smoke** (`tests/test_distributed_smoke.py`): one `tf.distribute.MirroredStrategy` epoch and one two-process `torch.distributed` step. CPU CI uses two logical CPUs and gloo. Two GPUs use those devices. Run `pytest tests/test_distributed_smoke.py -q`.
 - ✅ **77% branch coverage** of `src/kanx` (`layers.py` 95%, `model.py` 91%). The older 94% figure was a smaller core.
 - ✅ Hypothesis property tests (partition of unity, shape invariants, gradient finiteness)
 - ✅ Performance regression alarms (latency budgets on forward + predict)
@@ -112,12 +113,11 @@ Prometheus. 0.1.9 fixed multi-layer grid updates and the Docker image.
 ### Test coverage
 - ✅ **7 MatrixKAN tests** (`tests/test_matrix_kan.py`): output shape, numerical agreement, GPU throughput, grid update, ONNX export
 - ✅ **8 grid-update tests** (`tests/test_grid_update.py`): TensorFlow + PyTorch shape/stability/improvement
-- Cumulative CPU suite: **160 passed**, 4 skipped without Helm or CUDA; **77%** branch coverage of `src/kanx` (`layers.py` 95%, `model.py` 91%)
+- Cumulative CPU suite: **162 passed**, 4 skipped without Helm or CUDA; **77%** branch coverage of `src/kanx` (`layers.py` 95%, `model.py` 91%)
 
 ## 🔵 Backlog (P1)
 
 - [ ] Profiling: replace per-edge einsum with fused custom op
-- [ ] Multi-GPU / `tf.distribute.MirroredStrategy` + `torch.distributed` CI smoke
 - [ ] Bayesian / dropout KAN variant for uncertainty estimation
 - [ ] gRPC serving alongside REST
 - [ ] JAX backend (`kanx.jax`) as a third parallel surface

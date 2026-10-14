@@ -7,6 +7,7 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 ## [Unreleased]
 
 ### Added
+- **Distributed smoke tests.** `tests/test_distributed_smoke.py` trains a tiny TensorFlow KAN for one epoch under `tf.distribute.MirroredStrategy` and a tiny PyTorch KAN for one step under `torch.distributed`. With no GPU, TensorFlow uses two logical CPUs and PyTorch uses two gloo processes. Two or more GPUs use those devices. The pytest CI job runs both.
 - **Helm chart.** `charts/kanx` parameterizes the serving image, replica count, resources, probes, CPU HPA, model PVC, and Ingress from `k8s/`. `kubectl apply -f k8s/` still works. Do not install release `kanx-api` into a namespace that already has those manifests. The chart claim is named `<release>-models`.
 - **Mixed precision and XLA on the TensorFlow spline path.** `KAN` and `KANLinear` take `precision` (`float32`, `float16`, `bfloat16`) and `jit_compile`. Reduced precision applies to the SiLU matmul and the spline einsum. The B-spline basis, the stored weights, and the layer output stay float32. `jit_compile=True` wraps the forward pass in an XLA `tf.function`.
 - **PyTorch benchmark subprocess.** `benchmarks/real_world.py` trains the PyTorch KAN and MLP in `benchmarks/torch_worker.py` when `--device cuda` is selected, so TensorFlow and PyTorch do not initialize CUDA in one process. CPU runs and `--smoke` stay TensorFlow-only.

@@ -24,7 +24,7 @@ bash scripts/test.sh
 pytest tests/ -v --cov=src/kanx
 ```
 
-Expected on CPU, ignoring `tests/test_e2e_live.py`: **160 passed, 4 skipped** when Helm and CUDA are unavailable. Branch coverage of `src/kanx` is **77%**.
+Expected on CPU, ignoring `tests/test_e2e_live.py`: **162 passed, 4 skipped** when Helm and CUDA are unavailable. Branch coverage of `src/kanx` is **77%**. `pytest tests/test_distributed_smoke.py -q` runs the MirroredStrategy and `torch.distributed` smokes on their own.
 
 ## Train from the CLI
 
