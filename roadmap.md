@@ -107,6 +107,7 @@ Prometheus. 0.1.9 fixed multi-layer grid updates and the Docker image.
 - ✅ **Quickstart.md** additions: Grid update example (TF + PyTorch), MatrixKAN section
 - ✅ **System Design docs**: MatrixKAN architecture, adaptive grid implementation details, GPU considerations
 - ✅ **Roadmap clarity**: shipped 0.1.7–0.1.9 work is listed above; open items stay in Next and the backlogs
+- ✅ **Helm chart** (`charts/kanx`): values for the image, replica count, resources, probes, CPU HPA, model PVC, and Ingress. `kubectl apply -f k8s/` still works.
 
 ### Test coverage
 - ✅ **7 MatrixKAN tests** (`tests/test_matrix_kan.py`): output shape, numerical agreement, GPU throughput, grid update, ONNX export
@@ -118,7 +119,6 @@ Prometheus. 0.1.9 fixed multi-layer grid updates and the Docker image.
 - [ ] Profiling: replace per-edge einsum with fused custom op
 - [ ] Multi-GPU / `tf.distribute.MirroredStrategy` + `torch.distributed` CI smoke
 - [ ] Bayesian / dropout KAN variant for uncertainty estimation
-- [ ] Helm chart for `k8s/` (parameterised values)
 - [ ] gRPC serving alongside REST
 - [ ] JAX backend (`kanx.jax`) as a third parallel surface
 

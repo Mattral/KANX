@@ -71,12 +71,14 @@ docker compose up --build
 docker build -t kanx:latest .
 kind load docker-image kanx:latest    # if you use kind
 kubectl apply -f k8s/
+# or: helm install kanx-api charts/kanx
 kubectl port-forward svc/kanx-api 8000:80
 curl http://localhost:8000/api/health
 ```
 
 See `k8s/` — Deployment with rolling updates, Service, Ingress, HPA, PVC for
-model storage.
+model storage. `charts/kanx` is the parameterized form of those objects. Use
+one install path in a namespace.
 
 ## Environment variables
 

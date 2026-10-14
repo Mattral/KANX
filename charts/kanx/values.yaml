@@ -1,0 +1,131 @@
+# Defaults match the raw manifests in k8s/. Those files still apply with
+# kubectl. Do not install this chart into the same namespace under the
+# release name kanx-api, or the object names will collide.
+
+# Written on every upgrade. With the HPA enabled, keep this equal to autoscaling.minReplicas.
+replicaCount: 2
+
+image:
+  repository: ghcr.io/mattral/kanx
+  tag: latest
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# Pod selector. `app: kanx` matches `kubectl get pods -l app=kanx`.
+selector:
+  app: kanx
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8000
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8000"
+    prometheus.io/path: "/metrics"
+
+# RollingUpdate matches k8s/deployment.yaml (zero downtime).
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+
+# Non-root UID baked into the image.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+resources:
+  requests:
+    cpu: "500m"
+    memory: 1Gi
+  limits:
+    cpu: "2"
+    memory: 4Gi
+
+probes:
+  readiness:
+    path: /api/health
+    port: 8000
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 2
+    failureThreshold: 3
+  liveness:
+    path: /api/health
+    port: 8000
+    initialDelaySeconds: 30
+    periodSeconds: 30
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+env:
+  KANX_CONFIG: /app/configs/default.yaml
+  KANX_CHECKPOINT: /mnt/models/kanx_model.keras
+  KANX_MAX_BATCH: "4096"
+  TF_CPP_MIN_LOG_LEVEL: "3"
+  OMP_NUM_THREADS: "1"
+
+# Extra env entries, for example a Secret-backed API key:
+# - name: KANX_API_KEY
+#   valueFrom:
+#     secretKeyRef:
+#       name: kanx-api-key
+#       key: token
+extraEnv: []
+
+# readOnlyRootFilesystem needs writable emptyDirs.
+writableDirs:
+  tmp: /tmp
+  cache: /home/kanx/.cache
+
+persistence:
+  enabled: true
+  # Use an already-created claim and skip the template when this is set.
+  existingClaim: ""
+  # Empty uses the cluster default StorageClass.
+  # Set to "-" to force storageClassName: "".
+  storageClass: ""
+  accessModes:
+    - ReadWriteOnce
+  size: 1Gi
+  mountPath: /mnt/models
+  readOnly: true
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "8m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+  hosts:
+    - host: kanx.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

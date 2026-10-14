@@ -225,12 +225,14 @@ export_onnx_tf(model, "kan.onnx")
 
 ```bash
 docker run --rm -p 8000:8000 ghcr.io/mattral/kanx:latest
-kubectl apply -f k8s/    # Deployment + Service + Ingress + HPA + PVC
+kubectl apply -f k8s/                 # Deployment + Service + Ingress + HPA + PVC
+helm install kanx-api charts/kanx     # same objects, parameterized
 ```
 
 K8s manifests ship with rolling updates, readiness/liveness probes on
 `/api/health`, an HPA (2 ↔ 10 replicas, CPU-target 70%) and a PVC for the
-model registry.
+model registry. Use the raw manifests or the chart, not both, when the
+release name is `kanx-api`. Install notes: [`charts/kanx/README.md`](charts/kanx/README.md).
 
 ---
 

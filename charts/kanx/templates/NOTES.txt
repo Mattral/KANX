@@ -1,0 +1,21 @@
+KANX is installed as {{ include "kanx.fullname" . }}.
+
+The raw manifests in k8s/ still work with kubectl. Do not apply them into this
+namespace when the release name is kanx-api: the Deployment, Service, Ingress,
+and HPA names match.
+
+Image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+Replicas: {{ .Values.replicaCount }}
+{{- if .Values.autoscaling.enabled }}
+HPA: {{ .Values.autoscaling.minReplicas }} to {{ .Values.autoscaling.maxReplicas }} at {{ .Values.autoscaling.targetCPUUtilizationPercentage }}% CPU
+{{- end }}
+{{- if .Values.persistence.enabled }}
+PVC: {{ include "kanx.claimName" . }} ({{ .Values.persistence.size }})
+{{- else if .Values.persistence.existingClaim }}
+PVC: {{ .Values.persistence.existingClaim }} (existing)
+{{- else }}
+Model volume is an emptyDir. Checkpoints do not survive a restart.
+{{- end }}
+
+  kubectl get pods -l app={{ .Values.selector.app }}
+  kubectl port-forward svc/{{ include "kanx.fullname" . }} 8000:{{ .Values.service.port }}
