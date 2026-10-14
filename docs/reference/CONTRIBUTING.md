@@ -48,7 +48,6 @@ Open a draft PR early. We'd rather discuss with code in front of us!
 - PyTorch subprocess benchmark wrapper for GPU runners — next
 - Mixed precision and XLA on the spline einsum — next
 - JAX backend (third parallel surface) — P1
-- `kanx.viz` interactive edge-function viewer — P2
 
 ---
 

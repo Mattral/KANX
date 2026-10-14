@@ -7,6 +7,7 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 ## [Unreleased]
 
 ### Added
+- **Edge visualisation.** `kanx.viz` reads the learned 1-D function on each edge (SiLU residual times the base weight, plus the B-spline). `edge_curves` returns the samples, `plot_edges` draws one panel per edge (`pip install "kanx[viz]"` for matplotlib), and `write_edge_viewer` writes a self-contained HTML page with a layer picker and hover readout. TensorFlow `KAN`, PyTorch `KAN`, and `MatrixKAN` are covered. See `examples/visualize_edges.py` and `notebooks/visualize_edges.ipynb`.
 - **Edge pruning.** `KAN.prune()` and `KANLinear.prune()` on the TensorFlow, PyTorch, and MatrixKAN layers zero an edge when its score is at or below an absolute `threshold` and/or a `relative` fraction of the strongest edge in that layer. Pass `samples` to score each edge by the RMS of its contribution. Pruned spline coefficients and base weights are set to zero.
 - **CPU benchmark smoke gate.** `python benchmarks/compare_mlp.py --smoke` and `python benchmarks/real_world.py --smoke` train a tiny CPU configuration and exit non-zero when metrics are missing or non-finite. The `benchmark-smoke` GitHub Actions job runs both commands. Smoke mode writes only to `--output` and leaves the committed baseline artifacts in place.
 - `load_california_housing()` now loads NumPy arrays directly, so the real-world smoke gate needs scikit-learn and does not need pandas.
