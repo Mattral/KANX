@@ -33,6 +33,7 @@ kanx/
 ├── configs/              # YAML training configs
 ├── scripts/              # train.sh / benchmark.sh / test.sh
 ├── docs/                 # MkDocs source and reference docs
+├── charts/kanx/          # Helm chart for the API
 ├── k8s/                  # Kubernetes manifests
 ├── Dockerfile            # release image
 └── pyproject.toml        # build / install / pytest / ruff / black config

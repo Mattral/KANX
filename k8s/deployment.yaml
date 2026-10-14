@@ -1,3 +1,4 @@
+# Raw manifests for `kubectl apply -f k8s/`. Parameterized chart: charts/kanx.
 apiVersion: apps/v1
 kind: Deployment
 metadata:

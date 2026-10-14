@@ -49,6 +49,25 @@ Tagging convention (recommended once the repo goes public):
 `k8s/ingress.yaml` exposes the service via the `nginx` IngressClass — wire
 into your existing TLS termination.
 
+## Helm
+
+```bash
+helm install kanx-api charts/kanx
+helm upgrade --install kanx-api charts/kanx --set image.tag=0.1.9
+```
+
+`charts/kanx` parameterizes the image, replica count, resources, probes, CPU
+HPA, model PVC, and Ingress. Defaults match `k8s/`. The raw manifests still
+apply with `kubectl apply -f k8s/`. Do not install release `kanx-api` into a
+namespace that already has those objects: the Deployment, Service, Ingress,
+and HPA names match. The chart claim is `kanx-api-models`. The raw claim is
+`kanx-models-pvc`.
+
+A Helm upgrade writes `replicaCount` back onto the Deployment. Keep it equal
+to `autoscaling.minReplicas` (both default to 2). CPU HPA is still a starter
+signal for latency-sensitive inference. Value reference:
+`charts/kanx/README.md`.
+
 ## Rolling out a new model
 
 Two supported flows:

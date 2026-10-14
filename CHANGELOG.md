@@ -7,6 +7,7 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 ## [Unreleased]
 
 ### Added
+- **Helm chart.** `charts/kanx` parameterizes the serving image, replica count, resources, probes, CPU HPA, model PVC, and Ingress from `k8s/`. `kubectl apply -f k8s/` still works. Do not install release `kanx-api` into a namespace that already has those manifests. The chart claim is named `<release>-models`.
 - **Mixed precision and XLA on the TensorFlow spline path.** `KAN` and `KANLinear` take `precision` (`float32`, `float16`, `bfloat16`) and `jit_compile`. Reduced precision applies to the SiLU matmul and the spline einsum. The B-spline basis, the stored weights, and the layer output stay float32. `jit_compile=True` wraps the forward pass in an XLA `tf.function`.
 - **PyTorch benchmark subprocess.** `benchmarks/real_world.py` trains the PyTorch KAN and MLP in `benchmarks/torch_worker.py` when `--device cuda` is selected, so TensorFlow and PyTorch do not initialize CUDA in one process. CPU runs and `--smoke` stay TensorFlow-only.
 - **Edge visualisation.** `kanx.viz` reads the learned 1-D function on each edge (SiLU residual times the base weight, plus the B-spline). `edge_curves` returns the samples, `plot_edges` draws one panel per edge (`pip install "kanx[viz]"` for matplotlib), and `write_edge_viewer` writes a self-contained HTML page with a layer picker and hover readout. TensorFlow `KAN`, PyTorch `KAN`, and `MatrixKAN` are covered. See `examples/visualize_edges.py` and `notebooks/visualize_edges.ipynb`.
