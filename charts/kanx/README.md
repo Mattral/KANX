@@ -6,7 +6,7 @@ Parameterized form of the raw manifests in [`k8s/`](../../k8s/). Those files sti
 
 ```bash
 helm install kanx-api charts/kanx
-helm upgrade --install kanx-api charts/kanx --set image.tag=0.1.9
+helm upgrade --install kanx-api charts/kanx --set image.tag=0.2.0
 helm template kanx-api charts/kanx
 ```
 

@@ -51,6 +51,10 @@ Single source of truth for what's shipped and what's next.
 - ✅ `notebooks/LAUNCH_POST.md` — community launch copy
 - ✅ Benchmark chart (`docs/assets/benchmark.png`) plots the published 100-epoch CPU table. KAN[2,16,1] (432 params, test MSE 2.14×10⁻⁵) is about 26× lower MSE than MLP[2,64,64,1] (4,417 params, 5.51×10⁻⁴). The old 265× headline compared a shorter, unfair run and is withdrawn in `docs/benchmarks.md`.
 
+## ✅ Shipped in 0.2.0
+
+Package 0.2.0 collects the work after 0.1.9: edge pruning, `kanx.viz`, the PyTorch GPU benchmark subprocess, mixed precision and XLA, the Helm chart, and the distributed smoke tests. Those items are checked off below.
+
 ## ✅ Shipped — 0.1.7 through 0.1.9 (June 2026)
 
 These features shipped in package versions 0.1.7, 0.1.8, and 0.1.9.

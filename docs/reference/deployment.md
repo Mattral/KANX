@@ -53,7 +53,7 @@ into your existing TLS termination.
 
 ```bash
 helm install kanx-api charts/kanx
-helm upgrade --install kanx-api charts/kanx --set image.tag=0.1.9
+helm upgrade --install kanx-api charts/kanx --set image.tag=0.2.0
 ```
 
 `charts/kanx` parameterizes the image, replica count, resources, probes, CPU
