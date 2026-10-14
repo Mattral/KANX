@@ -22,6 +22,7 @@ Or run a single benchmark manually:
 ```bash
 python benchmarks/compare_mlp.py --long
 python benchmarks/real_world.py
+python benchmarks/real_world.py --device cuda   # PyTorch KAN + MLP in a subprocess
 ```
 
 ## Placeholder results table
