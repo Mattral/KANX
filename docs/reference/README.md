@@ -21,10 +21,6 @@
 
 </p>
 
-<p align="center">
-  <img src="docs/assets/benchmark.png" alt="KAN vs MLP benchmark" width="720"/>
-</p>
-
 > **`pip install kanx`** &nbsp;·&nbsp; A small KAN beats a 10× larger MLP on smooth, separable targets — **honest, param-matched benchmark below.**
 > One library. Two backends. Real ONNX export. Docker + Kubernetes ready. Prometheus metrics, TensorBoard logging, Hub and symbolic extras are now implemented.
 
@@ -61,6 +57,36 @@ model.predict([[0.5, 0.2]])                     # → array([[1.04…]])
 > ```
 > 
 > `kanx.check_input_range(model, X)` will log a warning at inference if input exceeds the grid.
+
+Drop edges that barely contribute. `threshold` is an absolute cutoff on the edge score. `relative` drops edges at or below that fraction of the strongest edge in the same layer. Pass `samples` to score each edge by its RMS on real inputs. The same method is on the PyTorch `KAN` and on `MatrixKAN`.
+
+```python
+model.prune(relative=0.01)                  # keep edges above 1% of the peak
+model.prune(threshold=1e-3, samples=X_train)
+```
+
+Plot what is left. Each edge is a learned 1-D function (SiLU residual plus B-spline). `plot_edges` needs matplotlib (`pip install "kanx[viz]"`). `write_edge_viewer` writes a single HTML file with a layer picker and a hover readout.
+
+```python
+from kanx.viz import plot_edges, write_edge_viewer
+
+plot_edges(model, path="edges.png")
+write_edge_viewer(model, "edges.html")
+```
+
+<p align="center">
+  <img src="../assets/edge_functions.png" alt="Learned edge functions on a two-input KAN" width="640"/>
+</p>
+
+Layer 0 of a `KAN([2, 1])` fit to `sin(π x₁) + 0.6 x₂²`. The first edge carries the sine. The second carries the quadratic.
+
+The TensorFlow spline contraction can run in reduced precision, and the forward pass can be XLA-compiled. Weights and the returned tensor stay float32. The Cox-de Boor basis stays float32 as well: knot differences underflow in float16.
+
+```python
+model = KAN([8, 16, 1], precision="bfloat16", jit_compile=True)
+```
+
+`precision` is `float32` (default), `float16`, or `bfloat16`. `jit_compile=True` compiles on the first call. Batch size may change; the feature width may not. The same arguments exist on `KANLinear`. PyTorch is unchanged. Do not export a `jit_compile=True` layer to ONNX; trace the default float32 layer instead. Reduced precision is close to float32, not bit-exact. bfloat16 is the practical training dtype.
 
 Want more control? Same simplicity, your data:
 
@@ -138,6 +164,10 @@ Synthetic 2-D regression target `y = sin(π·x₁) + cos(2π·x₂)`,
 | MLP[2,16,16,1]     |   337 |     5.46 |         4.08 | 1.60 × 10⁻³ |
 | MLP[2,64,64,1]     | 4 417 |     6.00 |         5.74 | 5.51 × 10⁻⁴ |
 
+<p align="center">
+  <img src="../assets/benchmark.png" alt="Test MSE for the published KAN and MLP runs" width="720"/>
+</p>
+
 **Honest read.** The smallest KAN (432 params) wins on this smooth separable
 target. The same KAN is ~10–15× *slower at inference* than a same-MSE MLP
 because each edge does a B-spline evaluation. On non-smooth or
@@ -146,6 +176,9 @@ are universally better than MLPs.
 
 Reproduce with `python benchmarks/compare_mlp.py` (quick, 100 epochs) or
 `python benchmarks/compare_mlp.py --long` (1000 epochs + early-stopping).
+`python benchmarks/real_world.py --device cuda` trains the PyTorch KAN and MLP
+in a child process, so TensorFlow and PyTorch do not initialize CUDA in one
+process. CPU runs and `--smoke` stay TensorFlow-only.
 
 ---
 

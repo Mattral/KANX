@@ -31,8 +31,8 @@ Single source of truth for what's shipped and what's next.
 - ✅ Supervisor-managed deployment via `backend/server.py`
 
 ### Quality
-- ✅ **95 tests** across 8 files — unit, integration, E2E, property-based, performance
-- ✅ **94% library coverage** (99% layers, 100% model)
+- ✅ **160 tests passed** on a CPU run that skips `tests/test_e2e_live.py`, with 4 skips when Helm and CUDA are absent
+- ✅ **77% branch coverage** of `src/kanx` (`layers.py` 95%, `model.py` 91%). The older 94% figure was a smaller core.
 - ✅ Hypothesis property tests (partition of unity, shape invariants, gradient finiteness)
 - ✅ Performance regression alarms (latency budgets on forward + predict)
 - ✅ Numerical-contract tests: partition of unity, non-negativity, save/load roundtrip, ONNX parity
@@ -48,7 +48,7 @@ Single source of truth for what's shipped and what's next.
 - ✅ `CHANGELOG.md` (Keep-a-Changelog format)
 - ✅ `notebooks/quickstart.ipynb` — Colab-ready "Train KAN in 2 minutes"
 - ✅ `notebooks/LAUNCH_POST.md` — community launch copy
-- ✅ Benchmark chart (`docs/assets/benchmark.png`) — KAN[2,32,1] beats MLP[2,64,64,1] by ~265× MSE with 5× fewer params
+- ✅ Benchmark chart (`docs/assets/benchmark.png`) plots the published 100-epoch CPU table. KAN[2,16,1] (432 params, test MSE 2.14×10⁻⁵) is about 26× lower MSE than MLP[2,64,64,1] (4,417 params, 5.51×10⁻⁴). The old 265× headline compared a shorter, unfair run and is withdrawn in `docs/benchmarks.md`.
 
 ## ✅ Shipped — 0.1.7 through 0.1.9 (June 2026)
 
@@ -112,7 +112,7 @@ Prometheus. 0.1.9 fixed multi-layer grid updates and the Docker image.
 ### Test coverage
 - ✅ **7 MatrixKAN tests** (`tests/test_matrix_kan.py`): output shape, numerical agreement, GPU throughput, grid update, ONNX export
 - ✅ **8 grid-update tests** (`tests/test_grid_update.py`): TensorFlow + PyTorch shape/stability/improvement
-- Cumulative: **110 tests** across 10 files; **95%+ coverage** on core modules
+- Cumulative CPU suite: **160 passed**, 4 skipped without Helm or CUDA; **77%** branch coverage of `src/kanx` (`layers.py` 95%, `model.py` 91%)
 
 ## 🔵 Backlog (P1)
 

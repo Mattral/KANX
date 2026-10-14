@@ -22,7 +22,7 @@
 * **End-to-end (7 tests)** — FastAPI TestClient hits `/api/{health,info,
   predict,load,reset}` with valid and invalid payloads.
 
-Total: **113 tests, all green**.
+A CPU run that skips `tests/test_e2e_live.py` passes **160** tests and skips 4 (Helm template checks when `helm` is not on PATH, and MatrixKAN CUDA checks). The counts above are the original pyramid, not the current file list.
 
 ## Conventions
 
@@ -56,9 +56,10 @@ Plus structural invariants:
 
 ## Coverage
 
-CI computes coverage via `pytest --cov=src/kanx` (`pytest-cov`). The current
-suite covers every public function in the library; the small uncovered
-fraction is `__main__.py` error paths exercised only by integration scripts.
+CI computes coverage via `pytest --cov=src/kanx` (`pytest-cov`). Branch
+coverage of `src/kanx` is **77%** on the CPU run above. `layers.py` is 95%
+and `model.py` is 91%. The optional Feynman and tabular loaders are the
+largest gaps.
 
 ## Running tests
 
