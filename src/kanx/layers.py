@@ -131,6 +131,35 @@ def _as_prune_samples(samples, in_features: int, dtype) -> tf.Tensor | None:
     return batch
 
 
+_PRECISION_DTYPES = {
+    "float32": tf.float32,
+    "float16": tf.float16,
+    "bfloat16": tf.bfloat16,
+}
+
+
+def normalize_precision(precision: str) -> str:
+    """Return the canonical precision name.
+
+    ``mixed_float16`` and ``mixed_bfloat16`` are accepted aliases. The
+    B-spline recursion always runs in float32; the alias only selects the
+    dtype of the residual matmul and the spline einsum.
+    """
+    key = str(precision).strip().lower().replace("-", "_")
+    aliases = {
+        "fp32": "float32",
+        "fp16": "float16",
+        "bf16": "bfloat16",
+        "mixed_float16": "float16",
+        "mixed_bfloat16": "bfloat16",
+    }
+    key = aliases.get(key, key)
+    if key not in _PRECISION_DTYPES:
+        allowed = ", ".join(sorted(_PRECISION_DTYPES))
+        raise ValueError(f"precision must be one of {allowed}, got {precision!r}")
+    return key
+
+
 # ----------------------------------------------------------------------------
 # KAN edge bank
 # ----------------------------------------------------------------------------
@@ -154,6 +183,14 @@ class KANLinear(Layer):
         scale_base:            scale of the base-path Glorot init.
         regularization_factor: L2 regularization strength (0 disables).
         trainable_grid:        whether the grid points are trainable.
+        precision:             ``float32`` (default), ``float16``, or
+                               ``bfloat16``. Reduced precision applies to the
+                               base matmul and the spline einsum. The
+                               Cox-de Boor basis stays in float32, and the
+                               layer returns float32.
+        jit_compile:           wrap the forward pass in an XLA
+                               ``tf.function``. The first call compiles.
+                               Feature width is fixed; batch size may change.
     """
 
     def __init__(
@@ -169,6 +206,8 @@ class KANLinear(Layer):
         regularization_factor: float = 0.0,
         trainable_grid: bool = False,
         grid_eps: float = 0.02,
+        precision: str = "float32",
+        jit_compile: bool = False,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -193,6 +232,8 @@ class KANLinear(Layer):
         self.regularization_factor = float(regularization_factor)
         self.trainable_grid = bool(trainable_grid)
         self.grid_eps = float(grid_eps)
+        self.precision = normalize_precision(precision)
+        self.jit_compile = bool(jit_compile)
 
         # Number of B-spline basis functions of degree `spline_order`.
         self.num_basis = self.grid_size + self.spline_order
@@ -238,19 +279,51 @@ class KANLinear(Layer):
             trainable=self.trainable_grid,
         )
         super().build(input_shape)
+        if self.jit_compile:
+            # Keep the compiled function off Keras's tracking list.
+            object.__setattr__(
+                self,
+                "_jit_forward",
+                tf.function(self._forward, jit_compile=True),
+            )
+
+    def _forward(self, inputs):
+        """SiLU residual plus spline einsum.
+
+        Float32 uses the inputs' dtype end to end. Reduced precision casts
+        only the two dense contractions. The basis is computed in float32
+        so knot differences do not underflow.
+        """
+        compute = _PRECISION_DTYPES[self.precision]
+        if compute == tf.float32:
+            base_out = tf.matmul(self.base_activation(inputs), self.base_weight)
+            grid_ext = extend_grid(self.grid, self.spline_order)
+            basis = b_spline_basis(inputs, grid_ext, self.spline_order)
+            spline_out = tf.einsum("bik,iok->bo", basis, self.spline_weight)
+            return base_out + spline_out
+
+        x32 = tf.cast(inputs, tf.float32)
+        grid_ext = extend_grid(tf.cast(self.grid, tf.float32), self.spline_order)
+        basis = b_spline_basis(x32, grid_ext, self.spline_order)
+        spline_out = tf.einsum(
+            "bik,iok->bo",
+            tf.cast(basis, compute),
+            tf.cast(self.spline_weight, compute),
+        )
+        base_out = tf.matmul(
+            tf.cast(self.base_activation(x32), compute),
+            tf.cast(self.base_weight, compute),
+        )
+        return tf.cast(base_out + spline_out, tf.float32)
 
     def call(self, inputs):
-        # Base residual path: silu(x) @ W_base   →   (B, out_features)
-        base_out = tf.matmul(self.base_activation(inputs), self.base_weight)
-
-        # Spline path
-        grid_ext = extend_grid(self.grid, self.spline_order)
-        basis = b_spline_basis(inputs, grid_ext, self.spline_order)
-        #   basis:        (B, F_in, num_basis)
-        #   spline_weight:(F_in, F_out, num_basis)
-        #   spline_out:   (B, F_out)
-        spline_out = tf.einsum("bik,iok->bo", basis, self.spline_weight)
-        return base_out + spline_out
+        if not self.jit_compile:
+            return self._forward(inputs)
+        compiled = getattr(self, "_jit_forward", None)
+        if compiled is None:
+            compiled = tf.function(self._forward, jit_compile=True)
+            object.__setattr__(self, "_jit_forward", compiled)
+        return compiled(inputs)
 
     def compute_output_shape(self, input_shape):
         return tuple(input_shape[:-1]) + (self.out_features,)
@@ -270,6 +343,8 @@ class KANLinear(Layer):
                 "regularization_factor": self.regularization_factor,
                 "trainable_grid": self.trainable_grid,
                 "grid_eps": self.grid_eps,
+                "precision": self.precision,
+                "jit_compile": self.jit_compile,
             }
         )
         return config
