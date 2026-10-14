@@ -36,6 +36,7 @@ torch = ["torch>=2.0"]
 onnx  = ["tf2onnx>=1.17", "onnx>=1.16", "onnxruntime>=1.18"]
 hub   = ["huggingface_hub>=0.21"]
 symbolic = ["sympy>=1.12"]
+viz = ["matplotlib>=3.7"]
 dev   = [
   "pytest>=7",
   "pytest-cov>=4",
@@ -51,7 +52,7 @@ dev   = [
   "types-PyYAML",
 ]
 docs  = ["mkdocs>=1.6", "mkdocs-material>=9.5"]
-all   = ["kanx[api,torch,onnx,hub,symbolic,dev,docs]"]
+all   = ["kanx[api,torch,onnx,hub,symbolic,viz,dev,docs]"]
 
 [project.scripts]
 kanx = "kanx.__main__:main"

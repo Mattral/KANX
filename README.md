@@ -135,6 +135,15 @@ model.prune(relative=0.01)                  # keep edges above 1% of the peak
 model.prune(threshold=1e-3, samples=X_train)
 ```
 
+Plot what is left. Each edge is a learned 1-D function (SiLU residual plus B-spline). `plot_edges` needs matplotlib (`pip install "kanx[viz]"`). `write_edge_viewer` writes a single HTML file with a layer picker and a hover readout.
+
+```python
+from kanx.viz import plot_edges, write_edge_viewer
+
+plot_edges(model, path="edges.png")
+write_edge_viewer(model, "edges.html")
+```
+
 ---
 
 Want more control? Same simplicity, your data:
@@ -206,7 +215,8 @@ pip install "kanx[onnx]"        # +tf2onnx + onnxruntime
 pip install "kanx[api]"         # +FastAPI service
 pip install "kanx[hub]"         # +HuggingFace Hub integration
 pip install "kanx[symbolic]"    # +Symbolic regression hooks
-pip install "kanx[all]"         # everything (api + torch + onnx + hub + symbolic + dev + docs)
+pip install "kanx[viz]"         # +matplotlib for plot_edges
+pip install "kanx[all]"         # everything (api + torch + onnx + hub + symbolic + viz + dev + docs)
 ```
 
 Optional extras:
@@ -214,6 +224,7 @@ Optional extras:
 * `kanx[torch]` adds the PyTorch backend, `MatrixKAN`, and symbolic helpers.
 * `kanx[hub]` adds `push_to_hub()` / `from_pretrained()` for HuggingFace integration.
 * `kanx[symbolic]` adds `SymbolicFitter` for post-hoc edge function extraction.
+* `kanx[viz]` adds matplotlib so `kanx.viz.plot_edges` can draw the learned curves. The HTML viewer does not need it.
 
 → Open in Colab: **[Train a KAN in 2-to-5 minutes](https://colab.research.google.com/github/Mattral/KANX/blob/main/notebooks/quickstart.ipynb)**
 

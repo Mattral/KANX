@@ -95,6 +95,7 @@ Prometheus. 0.1.9 fixed multi-layer grid updates and the Docker image.
 - ✅ **Prometheus** scrape endpoint at `GET /metrics` in the FastAPI service
 - ✅ **CPU benchmark smoke gate**: `benchmarks/compare_mlp.py --smoke` and `benchmarks/real_world.py --smoke`, run from the `benchmark-smoke` GitHub Actions job. Smoke runs do not overwrite the committed baseline artifacts.
 - ✅ **Edge pruning** on TensorFlow `KAN`, PyTorch `KAN`, and `MatrixKAN`: `prune(threshold=..., relative=..., samples=...)` zeros low-magnitude or low-contribution edges
+- ✅ **Edge visualisation** (`kanx.viz`): `edge_curves`, `plot_edges`, and `write_edge_viewer` plot the learned 1-D edge (base residual + spline) for TensorFlow `KAN`, PyTorch `KAN`, and `MatrixKAN`. Example: `examples/visualize_edges.py`. Notebook: `notebooks/visualize_edges.ipynb`.
 
 ### Infrastructure & quality
 - ✅ **CITATION.cff** (CFF v1.2.0 format) — machine-readable citation for academic attribution
@@ -126,7 +127,6 @@ Prometheus. 0.1.9 fixed multi-layer grid updates and the Docker image.
 
 ## 🟣 Backlog (P2)
 
-- [ ] Interactive visualisation of learned edge functions (`kanx.viz`)
 - [ ] Reproduce subset of Liu et al. (2024) benchmarks (Feynman dataset)
 - [ ] Sphinx auto-API reference
 - [ ] Triton inference server adapter
