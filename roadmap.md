@@ -97,6 +97,7 @@ Prometheus. 0.1.9 fixed multi-layer grid updates and the Docker image.
 - ✅ **Edge pruning** on TensorFlow `KAN`, PyTorch `KAN`, and `MatrixKAN`: `prune(threshold=..., relative=..., samples=...)` zeros low-magnitude or low-contribution edges
 - ✅ **Edge visualisation** (`kanx.viz`): `edge_curves`, `plot_edges`, and `write_edge_viewer` plot the learned 1-D edge (base residual + spline) for TensorFlow `KAN`, PyTorch `KAN`, and `MatrixKAN`. Example: `examples/visualize_edges.py`. Notebook: `notebooks/visualize_edges.ipynb`.
 - ✅ **PyTorch subprocess benchmark wrapper**: `benchmarks/real_world.py` runs the PyTorch KAN and MLP in a child process when a GPU is requested, so TensorFlow and PyTorch do not share a CUDA context. CPU runs and `--smoke` stay in-process and TensorFlow-only.
+- ✅ **Mixed precision + XLA** on the TensorFlow spline path: `precision="float16"` or `"bfloat16"` casts the residual matmul and spline einsum, and `jit_compile=True` compiles the forward pass. The Cox-de Boor basis stays float32.
 
 ### Infrastructure & quality
 - ✅ **CITATION.cff** (CFF v1.2.0 format) — machine-readable citation for academic attribution
@@ -111,10 +112,6 @@ Prometheus. 0.1.9 fixed multi-layer grid updates and the Docker image.
 - ✅ **7 MatrixKAN tests** (`tests/test_matrix_kan.py`): output shape, numerical agreement, GPU throughput, grid update, ONNX export
 - ✅ **8 grid-update tests** (`tests/test_grid_update.py`): TensorFlow + PyTorch shape/stability/improvement
 - Cumulative: **110 tests** across 10 files; **95%+ coverage** on core modules
-
-## 🟡 Next iteration
-
-- [ ] **Mixed precision** + XLA JIT on the spline einsum
 
 ## 🔵 Backlog (P1)
 

@@ -144,6 +144,14 @@ plot_edges(model, path="edges.png")
 write_edge_viewer(model, "edges.html")
 ```
 
+The TensorFlow spline contraction can run in reduced precision, and the forward pass can be XLA-compiled. Weights and the returned tensor stay float32. The Cox-de Boor basis stays float32 as well: knot differences underflow in float16.
+
+```python
+model = KAN([8, 16, 1], precision="bfloat16", jit_compile=True)
+```
+
+`precision` is `float32` (default), `float16`, or `bfloat16`. `jit_compile=True` compiles on the first call. Batch size may change; the feature width may not. The same arguments exist on `KANLinear`. PyTorch is unchanged. Do not export a `jit_compile=True` layer to ONNX; trace the default float32 layer instead. Reduced precision is close to float32, not bit-exact. bfloat16 is the practical training dtype.
+
 ---
 
 Want more control? Same simplicity, your data:

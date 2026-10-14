@@ -43,6 +43,9 @@ class KAN(tf.keras.Sequential):
         regularization_factor: float = 0.0,
         grid_range=(-1.0, 1.0),
         name: str = "kan",
+        *,
+        precision: str = "float32",
+        jit_compile: bool = False,
         **kwargs,
     ):
         super().__init__(name=name)
@@ -53,6 +56,8 @@ class KAN(tf.keras.Sequential):
             "base_activation": base_activation,
             "regularization_factor": regularization_factor,
             "grid_range": grid_range,
+            "precision": precision,
+            "jit_compile": jit_compile,
         }
         self._defaults = self._default_kwargs
         self._extra_kwargs = kwargs
@@ -170,6 +175,8 @@ class KAN(tf.keras.Sequential):
             "regularization_factor": float(self._default_kwargs["regularization_factor"]),
             "grid_range": list(self._default_kwargs["grid_range"]),
             "name": self.name,
+            "precision": self._default_kwargs["precision"],
+            "jit_compile": bool(self._default_kwargs["jit_compile"]),
         }
 
     @classmethod
