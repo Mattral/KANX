@@ -116,19 +116,21 @@ def plot_edges(
     ``model`` may be a KAN model or one edge-bank layer. ``layer`` selects
     which bank to draw when ``model`` has several. Returns the matplotlib
     figure. When ``path`` is set, the figure is also written there.
+
+    The layer index is checked before matplotlib is imported, so a bad index
+    is reported even when the ``viz`` extra is not installed.
     """
+    layers = kan_layers(model)
+    if layer < 0 or layer >= len(layers):
+        raise IndexError(f"layer {layer} is outside 0..{len(layers) - 1}")
+    target = layers[layer]
+    positions, curves = edge_curves(target, x=x, n=n)
     try:
         import matplotlib.pyplot as plt
     except ImportError as err:
         raise ImportError(
             'plot_edges needs matplotlib. Install it with: pip install "kanx[viz]"'
         ) from err
-
-    layers = kan_layers(model)
-    if layer < 0 or layer >= len(layers):
-        raise IndexError(f"layer {layer} is outside 0..{len(layers) - 1}")
-    target = layers[layer]
-    positions, curves = edge_curves(target, x=x, n=n)
     rows = int(target.out_features)
     cols = int(target.in_features)
     fig, axes = plt.subplots(

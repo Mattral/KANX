@@ -86,28 +86,35 @@ def test_zero_edge_is_flat_and_model_walker_keeps_order():
     np.testing.assert_allclose(curves, 0.0, atol=1e-6)
 
 
-def test_viewers_write_a_figure_and_an_html_page(tmp_path):
+def _tiny_torch_model():
     model = TorchKAN([2, 1], grid_size=2, spline_order=1)
     with torch.no_grad():
         layer = kan_layers(model)[0]
         layer.spline_weight.zero_()
         layer.base_weight.zero_()
         layer.base_weight[0, 0] = 1.0
+    return model
 
-    import matplotlib.pyplot as plt
 
-    figure_path = tmp_path / "edges.png"
-    fig = plot_edges(model, path=figure_path, n=24)
-    assert figure_path.stat().st_size > 0
-    plt.close(fig)
-
-    page = write_edge_viewer(model, tmp_path / "edges.html", n=24)
+def test_html_viewer_writes_curves(tmp_path):
+    page = write_edge_viewer(_tiny_torch_model(), tmp_path / "edges.html", n=24)
     text = page.read_text(encoding="utf-8")
     assert "kanx-edge-data" in text
     payload = json.loads(text.split('type="application/json">', 1)[1].split("</script>", 1)[0])
     assert payload[0]["in_features"] == 2
     assert payload[0]["out_features"] == 1
     assert len(payload[0]["curves"][0][0]) == 24
+
+
+def test_plot_edges_writes_a_png(tmp_path):
+    matplotlib = pytest.importorskip("matplotlib")
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    figure_path = tmp_path / "edges.png"
+    fig = plot_edges(_tiny_torch_model(), path=figure_path, n=24)
+    assert figure_path.stat().st_size > 0
+    plt.close(fig)
 
 
 def test_matrix_model_viewer_lists_every_layer(tmp_path):
