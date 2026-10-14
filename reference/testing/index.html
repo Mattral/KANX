@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -919,7 +919,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../roadmap.md" class="md-nav__link">
+      <a href="../../roadmap/" class="md-nav__link">
         
   
   
@@ -1219,6 +1219,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#distributed-smoke" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Distributed smoke
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#running-tests" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1383,6 +1394,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#distributed-smoke" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Distributed smoke
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#running-tests" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1450,7 +1472,7 @@
 <li><strong>End-to-end (7 tests)</strong> — FastAPI TestClient hits <code>/api/{health,info,
   predict,load,reset}</code> with valid and invalid payloads.</li>
 </ul>
-<p>Total: <strong>113 tests, all green</strong>.</p>
+<p>A CPU run that skips <code>tests/test_e2e_live.py</code> passes <strong>162</strong> tests and skips 4 (Helm template checks when <code>helm</code> is not on PATH, and MatrixKAN CUDA checks). The counts above are the original pyramid, not the current file list.</p>
 <h2 id="conventions">Conventions<a class="headerlink" href="#conventions" title="Permanent link">#</a></h2>
 <ul>
 <li><code>tests/conftest.py</code> adds <code>src/</code> and the repo root to <code>sys.path</code> and
@@ -1481,18 +1503,25 @@
    outputs (atol=1e-5) on a fixed input.</li>
 </ol>
 <h2 id="coverage">Coverage<a class="headerlink" href="#coverage" title="Permanent link">#</a></h2>
-<p>CI computes coverage via <code>pytest --cov=src/kanx</code> (<code>pytest-cov</code>). The current
-suite covers every public function in the library; the small uncovered
-fraction is <code>__main__.py</code> error paths exercised only by integration scripts.</p>
+<p>CI computes coverage via <code>pytest --cov=src/kanx</code> (<code>pytest-cov</code>). Branch
+coverage of <code>src/kanx</code> is <strong>77%</strong> on the CPU run above. <code>layers.py</code> is 95%
+and <code>model.py</code> is 91%. The optional Feynman and tabular loaders are the
+largest gaps.</p>
+<h2 id="distributed-smoke">Distributed smoke<a class="headerlink" href="#distributed-smoke" title="Permanent link">#</a></h2>
+<p><code>tests/test_distributed_smoke.py</code> is part of the pytest CI job. It trains a tiny TensorFlow KAN for one epoch under <code>tf.distribute.MirroredStrategy</code>, and a tiny PyTorch KAN for one step under <code>torch.distributed</code>.</p>
+<p>With no GPU, TensorFlow uses two logical CPUs and PyTorch uses two gloo processes. Two or more GPUs use those devices. If logical CPUs cannot be configured, the TensorFlow script falls back to <code>OneDeviceStrategy</code> on one CPU.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>pytest<span class="w"> </span>tests/test_distributed_smoke.py<span class="w"> </span>-q
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>python<span class="w"> </span>tests/distributed_smoke_tf.py
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>python<span class="w"> </span>tests/distributed_smoke_torch.py
+</span></code></pre></div>
 <h2 id="running-tests">Running tests<a class="headerlink" href="#running-tests" title="Permanent link">#</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>bash<span class="w"> </span>scripts/test.sh<span class="w">             </span><span class="c1"># default: full suite + coverage report</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>pytest<span class="w"> </span>tests/test_layers.py<span class="w"> </span>-v<span class="w">   </span><span class="c1"># one file</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>pytest<span class="w"> </span>-k<span class="w"> </span>partition_of_unity<span class="w">     </span><span class="c1"># one test</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>bash<span class="w"> </span>scripts/test.sh<span class="w">             </span><span class="c1"># default: full suite + coverage report</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>pytest<span class="w"> </span>tests/test_layers.py<span class="w"> </span>-v<span class="w">   </span><span class="c1"># one file</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>pytest<span class="w"> </span>-k<span class="w"> </span>partition_of_unity<span class="w">     </span><span class="c1"># one test</span>
 </span></code></pre></div>
 <h2 id="what-is-not-tested">What is <em>not</em> tested<a class="headerlink" href="#what-is-not-tested" title="Permanent link">#</a></h2>
 <ul>
-<li>GPU codepaths — the library inherits TF's GPU support but the CI runners
-  are CPU-only. GPU smoke tests are listed in <code>roadmap.md</code>.</li>
+<li>A multi-GPU machine in CI. The runners are CPU-only, so the distributed smoke uses logical CPUs and gloo. A host with two GPUs takes the GPU path instead.</li>
 <li>Long-running MNIST convergence — <code>examples/mnist_train.py</code> exists as a
   reproducible script; we don't gate CI on its accuracy.</li>
 <li>Docker image — built and smoke-tested in CI but only as a separate job;
@@ -1583,7 +1612,7 @@ fraction is <code>__main__.py</code> error paths exercised only by integration s
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "navigation.indexes", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "content.action.edit"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

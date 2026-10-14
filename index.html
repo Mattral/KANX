@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -29,7 +29,7 @@
       
     
     
-      <link rel="stylesheet" href="assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1145,7 +1145,7 @@
   
   
     <li class="md-nav__item">
-      <a href="roadmap.md" class="md-nav__link">
+      <a href="roadmap/" class="md-nav__link">
         
   
   
@@ -1685,10 +1685,6 @@
 
 </p>
 
-<p align="center">
-  <img src="docs/assets/benchmark.png" alt="KAN vs MLP benchmark" width="720"/>
-</p>
-
 <blockquote>
 <p><strong><code>pip install kanx</code></strong> &nbsp;·&nbsp; A small KAN beats a 10× larger MLP on smooth, separable targets — <strong>honest, param-matched benchmark below.</strong>
 One library. Two backends. Real ONNX export. Docker + Kubernetes ready. Prometheus metrics, TensorBoard logging, Hub and symbolic extras are now implemented.</p>
@@ -1718,48 +1714,69 @@ One library. Two backends. Real ONNX export. Docker + Kubernetes ready. Promethe
 </span></code></pre></div></p>
 <p><code>kanx.check_input_range(model, X)</code> will log a warning at inference if input exceeds the grid.</p>
 </blockquote>
+<p>Drop edges that barely contribute. <code>threshold</code> is an absolute cutoff on the edge score. <code>relative</code> drops edges at or below that fraction of the strongest edge in the same layer. Pass <code>samples</code> to score each edge by its RMS on real inputs. The same method is on the PyTorch <code>KAN</code> and on <code>MatrixKAN</code>.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">model</span><span class="o">.</span><span class="n">prune</span><span class="p">(</span><span class="n">relative</span><span class="o">=</span><span class="mf">0.01</span><span class="p">)</span>                  <span class="c1"># keep edges above 1% of the peak</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">model</span><span class="o">.</span><span class="n">prune</span><span class="p">(</span><span class="n">threshold</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span> <span class="n">samples</span><span class="o">=</span><span class="n">X_train</span><span class="p">)</span>
+</span></code></pre></div>
+<p>Plot what is left. Each edge is a learned 1-D function (SiLU residual plus B-spline). <code>plot_edges</code> needs matplotlib (<code>pip install "kanx[viz]"</code>). <code>write_edge_viewer</code> writes a single HTML file with a layer picker and a hover readout.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">kanx.viz</span><span class="w"> </span><span class="kn">import</span> <span class="n">plot_edges</span><span class="p">,</span> <span class="n">write_edge_viewer</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">plot_edges</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="s2">"edges.png"</span><span class="p">)</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="n">write_edge_viewer</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"edges.html"</span><span class="p">)</span>
+</span></code></pre></div>
+<p align="center">
+  <img src="assets/edge_functions.png" alt="Learned edge functions on a two-input KAN" width="640"/>
+</p>
+
+<p>Layer 0 of a <code>KAN([2, 1])</code> fit to <code>sin(π x₁) + 0.6 x₂²</code>. The first edge carries the sine. The second carries the quadratic.</p>
+<p>The TensorFlow spline contraction can run in reduced precision, and the forward pass can be XLA-compiled. Weights and the returned tensor stay float32. The Cox-de Boor basis stays float32 as well: knot differences underflow in float16.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">model</span> <span class="o">=</span> <span class="n">KAN</span><span class="p">([</span><span class="mi">8</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">precision</span><span class="o">=</span><span class="s2">"bfloat16"</span><span class="p">,</span> <span class="n">jit_compile</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span></code></pre></div>
+<p><code>precision</code> is <code>float32</code> (default), <code>float16</code>, or <code>bfloat16</code>. <code>jit_compile=True</code> compiles on the first call. Batch size may change; the feature width may not. The same arguments exist on <code>KANLinear</code>. PyTorch is unchanged. Do not export a <code>jit_compile=True</code> layer to ONNX; trace the default float32 layer instead. Reduced precision is close to float32, not bit-exact. bfloat16 is the practical training dtype.</p>
 <p>Want more control? Same simplicity, your data:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">kanx</span><span class="w"> </span><span class="kn">import</span> <span class="n">KAN</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">(</span><span class="mi">1024</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;float32&quot;</span><span class="p">)</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">X</span><span class="p">[:,</span> <span class="p">:</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="n">X</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:</span><span class="mi">2</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="n">model</span> <span class="o">=</span> <span class="n">KAN</span><span class="p">([</span><span class="mi">2</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">epochs</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>           <span class="c1"># auto-compiles with Adam+MSE</span>
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X</span><span class="p">[:</span><span class="mi">3</span><span class="p">])</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">kanx</span><span class="w"> </span><span class="kn">import</span> <span class="n">KAN</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">(</span><span class="mi">1024</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">"float32"</span><span class="p">)</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">X</span><span class="p">[:,</span> <span class="p">:</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="n">X</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:</span><span class="mi">2</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="n">model</span> <span class="o">=</span> <span class="n">KAN</span><span class="p">([</span><span class="mi">2</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">epochs</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>           <span class="c1"># auto-compiles with Adam+MSE</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X</span><span class="p">[:</span><span class="mi">3</span><span class="p">])</span>
 </span></code></pre></div>
 <h3 id="pytorch-same-api">🔥 PyTorch? Same API.<a class="headerlink" href="#pytorch-same-api" title="Permanent link">#</a></h3>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">kanx.torch</span><span class="w"> </span><span class="kn">import</span> <span class="n">KAN</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="n">model</span> <span class="o">=</span> <span class="n">KAN</span><span class="p">([</span><span class="mi">2</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="n">X</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">1024</span><span class="p">,</span> <span class="mi">2</span><span class="p">);</span> <span class="n">y</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">X</span><span class="p">[:,</span> <span class="p">:</span><span class="mi">1</span><span class="p">])</span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">epochs</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">lr</span><span class="o">=</span><span class="mf">1e-2</span><span class="p">)</span>             <span class="c1"># one-liner, same semantics</span>
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">([[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">]])</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">kanx.torch</span><span class="w"> </span><span class="kn">import</span> <span class="n">KAN</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="n">model</span> <span class="o">=</span> <span class="n">KAN</span><span class="p">([</span><span class="mi">2</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="n">X</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">1024</span><span class="p">,</span> <span class="mi">2</span><span class="p">);</span> <span class="n">y</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">X</span><span class="p">[:,</span> <span class="p">:</span><span class="mi">1</span><span class="p">])</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">epochs</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">lr</span><span class="o">=</span><span class="mf">1e-2</span><span class="p">)</span>             <span class="c1"># one-liner, same semantics</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">([[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">]])</span>
 </span></code></pre></div>
 <h3 id="gpu-optimized-matrixkan">⚡ GPU-optimized MatrixKAN<a class="headerlink" href="#gpu-optimized-matrixkan" title="Permanent link">#</a></h3>
 <p>For higher throughput on accelerators, use the vectorized <code>MatrixKAN</code> (replaces recursion with batched GEMM):</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">kanx.torch</span><span class="w"> </span><span class="kn">import</span> <span class="n">MatrixKAN</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">model</span> <span class="o">=</span> <span class="n">MatrixKAN</span><span class="p">([</span><span class="mi">4</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>  <span class="c1"># same interface as KAN</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">epochs</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>      <span class="c1"># ~1.5–2× faster on GPU vs standard KAN</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">kanx.torch</span><span class="w"> </span><span class="kn">import</span> <span class="n">MatrixKAN</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="n">model</span> <span class="o">=</span> <span class="n">MatrixKAN</span><span class="p">([</span><span class="mi">4</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>  <span class="c1"># same interface as KAN</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">epochs</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>      <span class="c1"># ~1.5–2× faster on GPU vs standard KAN</span>
 </span></code></pre></div>
 <hr />
 <h2 id="installation">📦 Installation<a class="headerlink" href="#installation" title="Permanent link">#</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>pip<span class="w"> </span>install<span class="w"> </span>kanx<span class="w">                </span><span class="c1"># core (TensorFlow)</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;kanx[torch]&quot;</span><span class="w">       </span><span class="c1"># +PyTorch backend</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;kanx[onnx]&quot;</span><span class="w">        </span><span class="c1"># +tf2onnx + onnxruntime</span>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;kanx[api]&quot;</span><span class="w">         </span><span class="c1"># +FastAPI service</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;kanx[hub]&quot;</span><span class="w">         </span><span class="c1"># +HuggingFace Hub integration</span>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;kanx[symbolic]&quot;</span><span class="w">    </span><span class="c1"># +Symbolic regression hooks</span>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;kanx[all]&quot;</span><span class="w">         </span><span class="c1"># everything (api + torch + onnx + hub + symbolic + dev + docs)</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>pip<span class="w"> </span>install<span class="w"> </span>kanx<span class="w">                </span><span class="c1"># core (TensorFlow)</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"kanx[torch]"</span><span class="w">       </span><span class="c1"># +PyTorch backend</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"kanx[onnx]"</span><span class="w">        </span><span class="c1"># +tf2onnx + onnxruntime</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"kanx[api]"</span><span class="w">         </span><span class="c1"># +FastAPI service</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"kanx[hub]"</span><span class="w">         </span><span class="c1"># +HuggingFace Hub integration</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"kanx[symbolic]"</span><span class="w">    </span><span class="c1"># +Symbolic regression hooks</span>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"kanx[viz]"</span><span class="w">         </span><span class="c1"># +matplotlib for plot_edges</span>
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"kanx[all]"</span><span class="w">         </span><span class="c1"># everything (api + torch + onnx + hub + symbolic + viz + dev + docs)</span>
 </span></code></pre></div>
 <p>Optional extras:
 * <code>kanx[api]</code> adds FastAPI serving with <code>/metrics</code> Prometheus scraping.
 * <code>kanx[torch]</code> adds the PyTorch backend, <code>MatrixKAN</code>, and symbolic helpers.
 * <code>kanx[hub]</code> adds <code>push_to_hub()</code> / <code>from_pretrained()</code> for HuggingFace integration.
-* <code>kanx[symbolic]</code> adds <code>SymbolicFitter</code> for post-hoc edge function extraction.</p>
+* <code>kanx[symbolic]</code> adds <code>SymbolicFitter</code> for post-hoc edge function extraction.
+* <code>kanx[viz]</code> adds matplotlib so <code>kanx.viz.plot_edges</code> can draw the learned curves. The HTML viewer does not need it.</p>
 <p>→ Open in Colab: <strong><a href="https://colab.research.google.com/github/Mattral/KANX/blob/main/notebooks/quickstart.ipynb">Train a KAN in 2 minutes</a></strong></p>
 <hr />
 <h2 id="benchmarks-reproducible-fair-multi-baseline">📊 Benchmarks (reproducible, fair, multi-baseline)<a class="headerlink" href="#benchmarks-reproducible-fair-multi-baseline" title="Permanent link">#</a></h2>
@@ -1813,13 +1830,22 @@ One library. Two backends. Real ONNX export. Docker + Kubernetes ready. Promethe
 </tr>
 </tbody>
 </table>
+<p align="center">
+  <img src="assets/benchmark.png" alt="Test MSE for the published KAN and MLP runs" width="720"/>
+</p>
+
 <p><strong>Honest read.</strong> The smallest KAN (432 params) wins on this smooth separable
 target. The same KAN is ~10–15× <em>slower at inference</em> than a same-MSE MLP
 because each edge does a B-spline evaluation. On non-smooth or
 high-dimensional targets, this picture often reverses. We do not claim KANs
 are universally better than MLPs.</p>
 <p>Reproduce with <code>python benchmarks/compare_mlp.py</code> (quick, 100 epochs) or
-<code>python benchmarks/compare_mlp.py --long</code> (1000 epochs + early-stopping).</p>
+<code>python benchmarks/compare_mlp.py --long</code> (1000 epochs + early-stopping).
+CI also runs <code>python benchmarks/compare_mlp.py --smoke</code> and
+<code>python benchmarks/real_world.py --smoke</code> on CPU. Those commands do not
+rewrite the published tables. <code>python benchmarks/real_world.py --device cuda</code>
+trains the PyTorch KAN and MLP in a child process, so TensorFlow and PyTorch
+do not initialize CUDA in one process. CPU runs and <code>--smoke</code> stay TensorFlow-only.</p>
 <hr />
 <h2 id="how-kanx-compares-to-other-kan-libraries">🧠 How kanx compares to other KAN libraries<a class="headerlink" href="#how-kanx-compares-to-other-kan-libraries" title="Permanent link">#</a></h2>
 <table>
@@ -1880,7 +1906,7 @@ are universally better than MLPs.</p>
 <td style="text-align: center;">research</td>
 <td style="text-align: center;">research</td>
 <td style="text-align: center;">research</td>
-<td style="text-align: center;"><strong>94%</strong></td>
+<td style="text-align: center;"><strong>CI + Hypothesis</strong></td>
 </tr>
 <tr>
 <td>PyPI</td>
@@ -1902,9 +1928,9 @@ are universally better than MLPs.</p>
 Research-y libs are great for novel experiments; kanx is what you ship.</p>
 <hr />
 <h2 id="rest-api">🌐 REST API<a class="headerlink" href="#rest-api" title="Permanent link">#</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>-p<span class="w"> </span><span class="m">8000</span>:8000<span class="w"> </span>ghcr.io/mattral/kanx:latest
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="c1"># or</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>uvicorn<span class="w"> </span>api.app:app<span class="w"> </span>--port<span class="w"> </span><span class="m">8000</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>-p<span class="w"> </span><span class="m">8000</span>:8000<span class="w"> </span>ghcr.io/mattral/kanx:latest
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="c1"># or</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>uvicorn<span class="w"> </span>api.app:app<span class="w"> </span>--port<span class="w"> </span><span class="m">8000</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -1947,42 +1973,44 @@ Research-y libs are great for novel experiments; kanx is what you ship.</p>
 </tr>
 </tbody>
 </table>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:8000/api/predict<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">     </span>-H<span class="w"> </span><span class="s1">&#39;content-type: application/json&#39;</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">     </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;x&quot;: [[0.1, -0.2], [0.5, 0.7]]}&#39;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:8000/api/predict<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">     </span>-H<span class="w"> </span><span class="s1">'content-type: application/json'</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">     </span>-d<span class="w"> </span><span class="s1">'{"x": [[0.1, -0.2], [0.5, 0.7]]}'</span>
 </span></code></pre></div>
 <p>The startup contract loads <code>KANX_CHECKPOINT</code> if it exists, otherwise falls
 back to a fresh model built from <code>KANX_CONFIG</code>. Boundaries are validated:
 wrong feature count → <code>400</code>, oversized batch → <code>413</code>, missing checkpoint → <code>404</code>.</p>
 <hr />
 <h2 id="onnx-export">🔄 ONNX export<a class="headerlink" href="#onnx-export" title="Permanent link">#</a></h2>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># From PyTorch</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">kanx.torch</span><span class="w"> </span><span class="kn">import</span> <span class="n">KAN</span><span class="p">,</span> <span class="n">export_onnx</span>
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="n">model</span> <span class="o">=</span> <span class="n">KAN</span><span class="p">([</span><span class="mi">2</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="n">export_onnx</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">&quot;kan.onnx&quot;</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># From PyTorch</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">kanx.torch</span><span class="w"> </span><span class="kn">import</span> <span class="n">KAN</span><span class="p">,</span> <span class="n">export_onnx</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="n">model</span> <span class="o">=</span> <span class="n">KAN</span><span class="p">([</span><span class="mi">2</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="n">export_onnx</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"kan.onnx"</span><span class="p">)</span>
 </span></code></pre></div>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># From TensorFlow</span>
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">kanx</span><span class="w"> </span><span class="kn">import</span> <span class="n">KAN</span><span class="p">,</span> <span class="n">export_onnx_tf</span>
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="kn">import</span><span class="w"> </span><span class="nn">tensorflow</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">tf</span>
-</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="n">model</span> <span class="o">=</span> <span class="n">KAN</span><span class="p">([</span><span class="mi">2</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">1</span><span class="p">]);</span> <span class="n">model</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)))</span>
-</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="n">export_onnx_tf</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">&quot;kan.onnx&quot;</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># From TensorFlow</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">kanx</span><span class="w"> </span><span class="kn">import</span> <span class="n">KAN</span><span class="p">,</span> <span class="n">export_onnx_tf</span>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="kn">import</span><span class="w"> </span><span class="nn">tensorflow</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">tf</span>
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="n">model</span> <span class="o">=</span> <span class="n">KAN</span><span class="p">([</span><span class="mi">2</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">1</span><span class="p">]);</span> <span class="n">model</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)))</span>
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="n">export_onnx_tf</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">"kan.onnx"</span><span class="p">)</span>
 </span></code></pre></div>
 <p>✔ Dynamic batch
 ✔ Verified numerical consistency (1e-5)
 ✔ Works with ONNX Runtime / TensorRT / OpenVINO</p>
 <hr />
 <h2 id="docker-kubernetes">🐳 Docker / ☸️ Kubernetes<a class="headerlink" href="#docker-kubernetes" title="Permanent link">#</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>-p<span class="w"> </span><span class="m">8000</span>:8000<span class="w"> </span>ghcr.io/mattral/kanx:latest
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>k8s/<span class="w">    </span><span class="c1"># Deployment + Service + Ingress + HPA + PVC</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>-p<span class="w"> </span><span class="m">8000</span>:8000<span class="w"> </span>ghcr.io/mattral/kanx:latest
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>k8s/<span class="w">                 </span><span class="c1"># Deployment + Service + Ingress + HPA + PVC</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>helm<span class="w"> </span>install<span class="w"> </span>kanx-api<span class="w"> </span>charts/kanx<span class="w">     </span><span class="c1"># same objects, parameterized</span>
 </span></code></pre></div>
 <p>K8s manifests ship with rolling updates, readiness/liveness probes on
 <code>/api/health</code>, an HPA (2 ↔ 10 replicas, CPU-target 70%) and a PVC for the
-model registry.</p>
+model registry. Use the raw manifests or the chart, not both, when the
+release name is <code>kanx-api</code>. Install notes: <a href="charts/kanx/README.md"><code>charts/kanx/README.md</code></a>.</p>
 <hr />
 <h2 id="cli">🛠️ CLI<a class="headerlink" href="#cli" title="Permanent link">#</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>python<span class="w"> </span>-m<span class="w"> </span>kanx<span class="w"> </span>info<span class="w">                                          </span><span class="c1"># versions</span>
-</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>python<span class="w"> </span>-m<span class="w"> </span>kanx<span class="w"> </span>train<span class="w"> </span>--config<span class="w"> </span>configs/default.yaml<span class="w">           </span><span class="c1"># train</span>
-</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>python<span class="w"> </span>-m<span class="w"> </span>kanx<span class="w"> </span>predict<span class="w"> </span>--checkpoint<span class="w"> </span>model.keras<span class="w"> </span>--input<span class="w"> </span>X.json
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>python<span class="w"> </span>-m<span class="w"> </span>kanx<span class="w"> </span>info<span class="w">                                          </span><span class="c1"># versions</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>python<span class="w"> </span>-m<span class="w"> </span>kanx<span class="w"> </span>train<span class="w"> </span>--config<span class="w"> </span>configs/default.yaml<span class="w">           </span><span class="c1"># train</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>python<span class="w"> </span>-m<span class="w"> </span>kanx<span class="w"> </span>predict<span class="w"> </span>--checkpoint<span class="w"> </span>model.keras<span class="w"> </span>--input<span class="w"> </span>X.json
 </span></code></pre></div>
 <hr />
 <h2 id="documentation">📚 Documentation<a class="headerlink" href="#documentation" title="Permanent link">#</a></h2>
@@ -2036,22 +2064,22 @@ the library. Our work is formally documented and available as a preprint:</p>
 <li>📄 <a href="docs/preprint.pdf">Read Paper (preprint)</a></li>
 </ul>
 <h3 id="citation">Citation<a class="headerlink" href="#citation" title="Permanent link">#</a></h3>
-<div class="language-bibtex highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nc">@article</span><span class="p">{</span><span class="nl">mattral2026kanx</span><span class="p">,</span>
-</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span><span class="na">title</span><span class="p">=</span><span class="s">{Bridging Theory and Practice with KANX}</span><span class="p">,</span>
-</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span><span class="na">author</span><span class="p">=</span><span class="s">{Myet, Min Htet}</span><span class="p">,</span>
-</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">  </span><span class="na">year</span><span class="p">=</span><span class="s">{2026}</span><span class="p">,</span>
-</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">  </span><span class="na">doi</span><span class="p">=</span><span class="s">{10.5281/zenodo.20430883}</span><span class="p">,</span>
-</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="w">  </span><span class="na">publisher</span><span class="p">=</span><span class="s">{Zenodo}</span>
-</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="p">}</span>
-</span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>
-</span><span id="__span-13-9"><a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a><span class="nc">@article</span><span class="p">{</span><span class="nl">liu2024kan</span><span class="p">,</span>
-</span><span id="__span-13-10"><a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="w">  </span><span class="na">title</span><span class="w">   </span><span class="p">=</span><span class="w"> </span><span class="s">{KAN: Kolmogorov-Arnold Networks}</span><span class="p">,</span>
-</span><span id="__span-13-11"><a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a><span class="w">  </span><span class="na">author</span><span class="w">  </span><span class="p">=</span><span class="w"> </span><span class="s">{Liu, Ziming and Wang, Yixuan and Vaidya, Sachin and Ruehle,</span>
-</span><span id="__span-13-12"><a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a><span class="s">             Fabian and Halverson, James and Soljačić, Marin and</span>
-</span><span id="__span-13-13"><a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a><span class="s">             Hou, Thomas Y. and Tegmark, Max}</span><span class="p">,</span>
-</span><span id="__span-13-14"><a id="__codelineno-13-14" name="__codelineno-13-14" href="#__codelineno-13-14"></a><span class="w">  </span><span class="na">journal</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">{arXiv preprint arXiv:2404.19756}</span><span class="p">,</span>
-</span><span id="__span-13-15"><a id="__codelineno-13-15" name="__codelineno-13-15" href="#__codelineno-13-15"></a><span class="w">  </span><span class="na">year</span><span class="w">    </span><span class="p">=</span><span class="w"> </span><span class="s">{2024}</span>
-</span><span id="__span-13-16"><a id="__codelineno-13-16" name="__codelineno-13-16" href="#__codelineno-13-16"></a><span class="p">}</span>
+<div class="language-bibtex highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="nc">@article</span><span class="p">{</span><span class="nl">mattral2026kanx</span><span class="p">,</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span><span class="na">title</span><span class="p">=</span><span class="s">{Bridging Theory and Practice with KANX}</span><span class="p">,</span>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">  </span><span class="na">author</span><span class="p">=</span><span class="s">{Myet, Min Htet}</span><span class="p">,</span>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">  </span><span class="na">year</span><span class="p">=</span><span class="s">{2026}</span><span class="p">,</span>
+</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="w">  </span><span class="na">doi</span><span class="p">=</span><span class="s">{10.5281/zenodo.20430883}</span><span class="p">,</span>
+</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="w">  </span><span class="na">publisher</span><span class="p">=</span><span class="s">{Zenodo}</span>
+</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="p">}</span>
+</span><span id="__span-16-8"><a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a>
+</span><span id="__span-16-9"><a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a><span class="nc">@article</span><span class="p">{</span><span class="nl">liu2024kan</span><span class="p">,</span>
+</span><span id="__span-16-10"><a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a><span class="w">  </span><span class="na">title</span><span class="w">   </span><span class="p">=</span><span class="w"> </span><span class="s">{KAN: Kolmogorov-Arnold Networks}</span><span class="p">,</span>
+</span><span id="__span-16-11"><a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a><span class="w">  </span><span class="na">author</span><span class="w">  </span><span class="p">=</span><span class="w"> </span><span class="s">{Liu, Ziming and Wang, Yixuan and Vaidya, Sachin and Ruehle,</span>
+</span><span id="__span-16-12"><a id="__codelineno-16-12" name="__codelineno-16-12" href="#__codelineno-16-12"></a><span class="s">             Fabian and Halverson, James and Soljačić, Marin and</span>
+</span><span id="__span-16-13"><a id="__codelineno-16-13" name="__codelineno-16-13" href="#__codelineno-16-13"></a><span class="s">             Hou, Thomas Y. and Tegmark, Max}</span><span class="p">,</span>
+</span><span id="__span-16-14"><a id="__codelineno-16-14" name="__codelineno-16-14" href="#__codelineno-16-14"></a><span class="w">  </span><span class="na">journal</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">{arXiv preprint arXiv:2404.19756}</span><span class="p">,</span>
+</span><span id="__span-16-15"><a id="__codelineno-16-15" name="__codelineno-16-15" href="#__codelineno-16-15"></a><span class="w">  </span><span class="na">year</span><span class="w">    </span><span class="p">=</span><span class="w"> </span><span class="s">{2024}</span>
+</span><span id="__span-16-16"><a id="__codelineno-16-16" name="__codelineno-16-16" href="#__codelineno-16-16"></a><span class="p">}</span>
 </span></code></pre></div>
 <h3 id="references">References<a class="headerlink" href="#references" title="Permanent link">#</a></h3>
 <ul>
@@ -2064,7 +2092,7 @@ the library. Our work is formally documented and available as a preprint:</p>
 <p>PRs welcome! See <a href="CONTRIBUTING.md"><code>CONTRIBUTING.md</code></a>. Good places to start:</p>
 <ul>
 <li>🔖 <a href="https://github.com/Mattral/KANX/labels/good%20first%20issue">Good first issues</a></li>
-<li>🗺️ <a href="roadmap.md"><code>roadmap.md</code></a> — P0 / P1 / P2 backlog</li>
+<li>🗺️ <a href="roadmap/"><code>roadmap.md</code></a> — P0 / P1 / P2 backlog</li>
 <li>💬 <a href="https://github.com/Mattral/KANX/discussions">Discussions</a></li>
 </ul>
 <hr />
@@ -2157,7 +2185,7 @@ hear how kanx is being used in the wild.</p>
       <script id="__config" type="application/json">{"annotate": null, "base": ".", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "navigation.indexes", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "content.action.edit"], "search": "assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>
