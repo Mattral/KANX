@@ -6,6 +6,8 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-14
+
 ### Added
 - **Distributed smoke tests.** `tests/test_distributed_smoke.py` trains a tiny TensorFlow KAN for one epoch under `tf.distribute.MirroredStrategy` and a tiny PyTorch KAN for one step under `torch.distributed`. With no GPU, TensorFlow uses two logical CPUs and PyTorch uses two gloo processes. Two or more GPUs use those devices. The pytest CI job runs both.
 - **Helm chart.** `charts/kanx` parameterizes the serving image, replica count, resources, probes, CPU HPA, model PVC, and Ingress from `k8s/`. `kubectl apply -f k8s/` still works. Do not install release `kanx-api` into a namespace that already has those manifests. The chart claim is named `<release>-models`.
@@ -17,10 +19,10 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 - `load_california_housing()` now loads NumPy arrays directly, so the real-world smoke gate needs scikit-learn and does not need pandas.
 
 ### Changed
-- Corrected the README, roadmap, and testing notes. A CPU run that skips `tests/test_e2e_live.py` passes 160 tests and skips 4 when Helm and CUDA are absent. Branch coverage of `src/kanx` is 77% (`layers.py` 95%, `model.py` 91%). The older 94% and 113-test figures described a smaller suite. The README shows the published benchmark chart beside that table and a `kanx.viz` plot of a learned sine and quadratic edge.
+- Package version is 0.2.0 in `pyproject.toml`, `kanx.__version__`, `CITATION.cff`, and the Helm chart `appVersion`. `kanx[viz]` (matplotlib) stays in the `kanx[all]` extra.
+- Corrected the README, roadmap, and testing notes. A CPU run that skips `tests/test_e2e_live.py` passes 162 tests and skips 4 when Helm and CUDA are absent. Branch coverage of `src/kanx` is 77% (`layers.py` 95%, `model.py` 91%). The older 94% and 113-test figures described a smaller suite. The README shows the published benchmark chart beside that table and a `kanx.viz` plot of a learned sine and quadratic edge.
 - Synced `roadmap.md` and `README.md` with the features already shipped in 0.1.8 and 0.1.9: MatrixKAN, adaptive grids, HuggingFace Hub, symbolic regression, TensorBoard, and Prometheus.
 - Recorded the 0.1.9 release in this changelog. `docs/changelog.md` and `docs/roadmap.md` now include these files so the site cannot drift.
-- Set `CITATION.cff` `version` to 0.1.9 so it matches the package.
 - CI installs the `hub` extra for the test job, because importing `kanx` loads the Hub helpers.
 - Docker image install already includes that extra (landed after the 0.1.9 notes above).
 
@@ -230,7 +232,8 @@ Initial production release.
 - Hand-rolled YAML validator (no pydantic dep in the core library).
 - API uses pydantic only at the request-boundary edge.
 
-[Unreleased]: https://github.com/Mattral/KANX/compare/v0.1.9...HEAD
+[Unreleased]: https://github.com/Mattral/KANX/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/Mattral/KANX/compare/v0.1.9...v0.2.0
 [0.1.9]: https://github.com/Mattral/KANX/releases/tag/v0.1.9
 [0.1.8]: https://github.com/Mattral/KANX/releases/tag/v0.1.8
 [0.1.7]: https://github.com/Mattral/KANX/releases/tag/v0.1.7

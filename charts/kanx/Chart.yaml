@@ -3,7 +3,7 @@ name: kanx
 description: FastAPI serving chart for the kanx Kolmogorov-Arnold Network library
 type: application
 version: 0.1.0
-appVersion: "0.1.9"
+appVersion: "0.2.0"
 kubeVersion: ">=1.25.0-0"
 keywords:
   - kan

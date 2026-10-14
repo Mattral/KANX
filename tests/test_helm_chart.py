@@ -27,7 +27,7 @@ def test_chart_metadata_and_defaults() -> None:
     assert chart["name"] == "kanx"
     assert chart["type"] == "application"
     assert chart["version"]
-    assert chart["appVersion"] == "0.1.9"
+    assert chart["appVersion"] == "0.2.0"
     assert values["replicaCount"] == 2
     assert values["image"] == {
         "repository": "ghcr.io/mattral/kanx",
