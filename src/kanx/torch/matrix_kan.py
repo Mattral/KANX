@@ -1,9 +1,13 @@
-"""GPU-optimized MatrixKAN: B-spline evaluation via batched matrix multiply.
+"""MatrixKAN: B-spline evaluation via batched matrix multiply.
+
+Speed is not established. The quickstart CUDA cell at hidden width 32 and
+batch 4096 measured this path slower than the recursive KAN (13.82 ms vs
+2.23 ms per call).
 
 Key design: replaces Cox-de Boor recursion with vectorized batched GEMM.
 For spline_order k and grid_size G, precomputes recurrence matrices M_1..M_k
 then evaluates all B-spline bases via: B = x_augmented @ M_1 @ M_2 @ ... @ M_k
-This reduces forward pass to k dense matrix multiplies (GPU-friendly).
+This reduces the forward pass to k dense matrix multiplies.
 """
 from __future__ import annotations
 
@@ -290,7 +294,7 @@ class MatrixKANLinear(nn.Module):
 
 
 class MatrixKAN(nn.Sequential):
-    """GPU-optimized KAN model using MatrixKANLinear layers."""
+    """KAN model using MatrixKANLinear layers. Same interface as ``KAN``."""
 
     def __init__(
         self,

@@ -30,3 +30,4 @@
 - This benchmark is **best-case** for KANs (the target is exactly the kind of function the Kolmogorov-Arnold representation theorem applies to). On real tabular or vision data, the picture is far more nuanced.
 - We do **not** claim KANs are universally better than MLPs.
 - For non-smooth or high-dimensional targets, an MLP will typically beat a same-size KAN on both accuracy and throughput.
+- The inference column is not a ranking. KAN[2,16,1] at 43.59 ms is slower than KAN[2,32,1] at 31.61 ms. The README table has the same inversion (68.64 ms versus 25.52 ms). That is the wrong direction for model size, and it looks like a first-call measurement. Do not quote either cell as a cost. Test MSE matches the README for KAN[2,16,1] (2.14e-05) and for the MLPs. The wider KAN does not (6.75e-05 here, 4.44e-04 in the README).

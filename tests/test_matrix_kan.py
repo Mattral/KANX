@@ -96,8 +96,11 @@ class TestMatrixKANGPU:
 
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
     def test_matrix_kan_gpu_throughput(self):
-        """MatrixKAN GPU inference is measurably faster than KANLinear (2x+ speedup).
-        This test is indicative; actual speedup depends on hardware.
+        """On CUDA, this layer shape should not be much slower than KANLinear.
+
+        The quickstart notebook's hidden-width-32, batch-4096 cell measured
+        MatrixKAN slower (13.82 ms vs 2.23 ms). This test is a different
+        shape (one layer, batch 256) and only checks a 0.95× floor.
         """
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -144,8 +147,8 @@ class TestMatrixKANGPU:
 
         if matrix_time is not None and kan_time is not None:
             speedup = kan_time / matrix_time
-            # MatrixKAN should be at least comparable (>=1x), ideally 1.5-2x faster
-            assert speedup >= 0.95, f"MatrixKAN not faster: speedup={speedup:.2f}x"
+            # A floor, not a 1.5–2× claim. See the quickstart CUDA cell.
+            assert speedup >= 0.95, f"MatrixKAN far slower on this shape: speedup={speedup:.2f}x"
 
 
 class TestMatrixKANGridUpdate:

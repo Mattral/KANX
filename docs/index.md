@@ -38,7 +38,7 @@ model.predict([[0.5, 0.2]])                     # → array([[1.04…]])
 
 > **⚠️ Grid calibration — two methods**
 > 
-> KANs use B-splines on a fixed input range (default `[-1, 1]`). If your inputs fall outside that range, the spline path **silently returns zero** and you only get the SiLU residual. Fix it one of two ways:
+> The stored knots default to `[-1, 1]` (`grid_size=5` is six knots, spacing 0.4). `extend_grid` adds `spline_order` knots of that spacing on each side, so the default cubic basis runs out to about ±2.2. The basis sums to 1 on the stored interval, is still nonzero at 1.7 (the sum is about 0.32), and is exactly zero at and beyond the outermost knot. Past that knot the layer is only the SiLU residual. Put the stored interval on the data one of two ways:
 > 
 > **Static approach** (pre-training):
 > ```python
@@ -56,13 +56,13 @@ model.predict([[0.5, 0.2]])                     # → array([[1.04…]])
 > model.fit(X_train, y_train, epochs=15)        # continue training
 > ```
 > 
-> `kanx.check_input_range(model, X)` will log a warning at inference if input exceeds the grid.
+> `kanx.check_input_range(model, X)` logs a warning when a row leaves the stored grid. That boundary is the interval you fit, which is stricter than the hard zero at the outermost knot.
 
-Drop edges that barely contribute. `threshold` is an absolute cutoff on the edge score. `relative` drops edges at or below that fraction of the strongest edge in the same layer. Pass `samples` to score each edge by its RMS on real inputs. The same method is on the PyTorch `KAN` and on `MatrixKAN`.
+Zero out edges that barely contribute. `prune` sets the spline coefficients and the base weight to zero. It does not remove the slot, and the contraction still visits it. `threshold` is an absolute cutoff on the edge score. `relative` zeros edges at or below that fraction of the strongest edge in the same layer. Pass `samples` to score each edge by its RMS on real inputs. The same method is on the PyTorch `KAN` and on `MatrixKAN`.
 
 ```python
-model.prune(relative=0.01)                  # keep edges above 1% of the peak
-model.prune(threshold=1e-3, samples=X_train)
+model.prune(relative=0.01)                    # zero edges at or below 1% of the peak
+model.prune(threshold=1e-3, samples=X_train)  # coefficients become zero; shapes stay
 ```
 
 Plot what is left. Each edge is a learned 1-D function (SiLU residual plus B-spline). `plot_edges` needs matplotlib (`pip install "kanx[viz]"`). `write_edge_viewer` writes a single HTML file with a layer picker and a hover readout.
@@ -78,9 +78,9 @@ write_edge_viewer(model, "edges.html")
   <img src="assets/edge_functions.png" alt="Learned edge functions on a two-input KAN" width="640"/>
 </p>
 
-Layer 0 of a `KAN([2, 1])` fit to `sin(π x₁) + 0.6 x₂²`. The first edge carries the sine. The second carries the quadratic.
+Layer 0 of a `KAN([2, 1])` fit to `sin(π x₁) + 0.6 x₂²`. The left edge follows the sine. The right edge follows a bowl. That is a reading of this plot. It is not a proof that each edge owns one term, and a shorter fit of the same target can leave the right side of the bowl unfinished.
 
-The TensorFlow spline contraction can run in reduced precision, and the forward pass can be XLA-compiled. Weights and the returned tensor stay float32. The Cox-de Boor basis stays float32 as well: knot differences underflow in float16.
+The TensorFlow spline contraction can run in reduced precision, and the forward pass can be XLA-compiled. Weights and the returned tensor stay float32. The Cox–de Boor basis stays float32 because `(x − tᵢ)` cancels near a knot and the divided differences amplify the error. bfloat16 has fewer mantissa bits than float16 (8 versus 11), so it is the worse choice for the basis and the better reduced choice for the contraction, where float16 overflows above 65504. Knot spacing does not underflow in float16 at grid size 5 (spacing 0.4) or at grid size 1000 (spacing 0.002).
 
 ```python
 model = KAN([8, 16, 1], precision="bfloat16", jit_compile=True)
@@ -114,16 +114,18 @@ model.fit(X, y, epochs=30, lr=1e-2)             # one-liner, same semantics
 model.predict([[0.5, 0.2]])
 ```
 
-### ⚡ GPU-optimized MatrixKAN
+### ⚡ MatrixKAN
 
-For higher throughput on accelerators, use the vectorized `MatrixKAN` (replaces recursion with batched GEMM):
+`MatrixKAN` evaluates the same basis with batched GEMMs instead of the Cox–de Boor loop. Same interface. On the measurement in this repo, it is not the faster model at the width in the example.
 
 ```python
 from kanx.torch import MatrixKAN
 
 model = MatrixKAN([4, 32, 1])  # same interface as KAN
-model.fit(X, y, epochs=30)      # ~1.5–2× faster on GPU vs standard KAN
+model.fit(X, y, epochs=30)
 ```
+
+The quickstart notebook's saved CUDA cell times `KAN([2, 32, 1])` at 2.23 ms/call and `MatrixKAN([2, 32, 1])` at 13.82 ms/call (batch 4096, 50 calls, `torch.cuda.synchronize` around the loop). The cell prints `Device: cuda`. It does not record the GPU name or the torch version. The notebook's Colab note tells the reader to select a T4. A crossover at larger width or batch has not been measured.
 
 ---
 
@@ -168,11 +170,15 @@ Synthetic 2-D regression target `y = sin(π·x₁) + cos(2π·x₂)`,
   <img src="assets/benchmark.png" alt="Test MSE for the published KAN and MLP runs" width="720"/>
 </p>
 
-**Honest read.** The smallest KAN (432 params) wins on this smooth separable
-target. The same KAN is ~10–15× *slower at inference* than a same-MSE MLP
-because each edge does a B-spline evaluation. On non-smooth or
-high-dimensional targets, this picture often reverses. We do not claim KANs
-are universally better than MLPs.
+**Honest read.** The smallest KAN (432 params) wins on test MSE on this smooth separable
+target. The inference column is not a ranking: KAN[2,16,1] at 68.64 ms is slower than
+the wider KAN[2,32,1] at 25.52 ms, which is the wrong direction for model size and looks
+like a first-call measurement. `benchmarks/results.md` records the same setup at 43.59 ms
+and 31.61 ms and still has the smaller model slower. Do not quote either inference cell
+as a cost. Test MSE agrees across the two tables for KAN[2,16,1] (2.14×10⁻⁵) and for the
+MLPs. The wider KAN does not (4.44×10⁻⁴ here, 6.75×10⁻⁵ there). On non-smooth or
+high-dimensional targets, this accuracy picture often reverses. We do not claim KANs are
+universally better than MLPs.
 
 Reproduce with `python benchmarks/compare_mlp.py` (quick, 100 epochs) or
 `python benchmarks/compare_mlp.py --long` (1000 epochs + early-stopping).

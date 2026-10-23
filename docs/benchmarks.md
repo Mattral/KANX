@@ -23,13 +23,14 @@
 
 - On a **smooth separable 2-D regression**, parameter-matched KAN and MLP are roughly comparable, with KANs sometimes winning by a small margin.
 - The previous headline claim ('265× lower MSE than MLP[2,64,64,1]') compared KAN[2,32,1] (864 params) against a deliberately **5× over-parameterised** MLP that was trained for only 30 epochs. That comparison was unfair on two axes.
-- **Compute cost.** KAN inference is consistently ~3–5× slower than an equivalent-MSE MLP on CPU, because per-edge B-spline evaluation does more work per parameter than a matmul + activation.
+- **Compute cost.** Per-edge B-spline evaluation does more work per parameter than a matmul plus an activation. The ~3–5× summary lives in `benchmarks/results.md`. It is not a ratio from the table on this page.
 
 ## Caveats
 
 - This benchmark is **best-case** for KANs (the target is exactly the kind of function the Kolmogorov-Arnold representation theorem applies to). On real tabular or vision data, the picture is far more nuanced.
 - We do **not** claim KANs are universally better than MLPs.
 - For non-smooth or high-dimensional targets, an MLP will typically beat a same-size KAN on both accuracy and throughput.
+- The inference column is not a ranking. KAN[2,16,1] at 68.64 ms is slower than KAN[2,32,1] at 25.52 ms, which is the wrong direction for model size. `benchmarks/results.md` is a second run of the same setup (43.59 ms and 31.61 ms) and has the same inversion. Do not quote either cell as a cost.
 
 ## Real-world tabular benchmarks (new)
 

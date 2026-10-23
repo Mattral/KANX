@@ -6,6 +6,12 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Fixed
+
+- The README, docs, and quickstart no longer say `MatrixKAN` is ~1.5–2× faster at hidden width 32. The saved CUDA cell in `notebooks/quickstart.ipynb` is 2.23 ms/call for `KAN([2, 32, 1])` and 13.82 ms/call for `MatrixKAN` at batch 4096.
+- Docs now say `prune()` zeros coefficients and leaves the tensor shape unchanged.
+- Docs and the basis comment no longer say the spline is zero outside `[-1, 1]`, or that knot differences underflow in float16. The basis stays float32 because `(x - t_i)` cancels near a knot. The published CPU inference cells that make the smaller KAN slower than the wider one are marked as unusable.
+
 ### Added
 
 - The quickstart notebook shows edge pruning, `kanx.viz` edge plots, and a short TensorFlow mixed-precision + XLA fit. The install cell includes `kanx[viz]`.

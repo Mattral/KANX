@@ -148,9 +148,9 @@ curl -X POST http://localhost:8000/api/predict \
 { "output": [[0.31], [0.84]], "shape": [2, 1], "inference_ms": 22.4 }
 ```
 
-## 6. GPU-Optimized MatrixKAN
+## 6. MatrixKAN
 
-For higher throughput on GPUs, use the vectorized `MatrixKAN` — replaces B-spline recursion with batched matrix multiplies:
+`MatrixKAN` replaces B-spline recursion with batched matrix multiplies:
 
 ```python
 from kanx.torch import MatrixKAN
@@ -161,7 +161,7 @@ X = torch.randn(1024, 8).cuda()
 y = model(X)
 ```
 
-On GPU, `MatrixKAN` is ~1.5–2× faster than standard `KAN` due to vectorized GEMM operations. CPU performance is comparable. Use standard `KAN` if you need symbolic regression hooks; use `MatrixKAN` for inference-only production.
+`MatrixKAN` replaces the Cox–de Boor loop with batched GEMMs. The quickstart notebook's saved CUDA cell, hidden width 32 and batch 4096, measured it slower: 13.82 ms/call against 2.23 ms/call for standard `KAN`. The cell prints `Device: cuda` and does not name the GPU. Use standard `KAN` when you need symbolic regression, and time `MatrixKAN` on the width and batch you will serve.
 
 ## 7. Export to ONNX
 
