@@ -9,14 +9,21 @@ import subprocess
 import sys
 import time
 
-print("Installing kanx 0.2.0. This sweep times the Python-loop basis, not a GEMM.")
-subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "kanx[torch]==0.2.0"])
 
-import torch
-import kanx
-from kanx.torch import KAN, MatrixKAN
-from kanx.torch.layers import KANLinear
-from kanx.torch.matrix_kan import MatrixKANLinear
+def _load():
+    print("Installing kanx 0.2.0. This sweep times the Python-loop basis, not a GEMM.")
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "kanx[torch]==0.2.0"])
+    import torch
+
+    import kanx
+    from kanx.torch import KAN, MatrixKAN
+    from kanx.torch.layers import KANLinear
+    from kanx.torch.matrix_kan import MatrixKANLinear
+
+    return torch, kanx, KAN, MatrixKAN, KANLinear, MatrixKANLinear
+
+
+torch, kanx, KAN, MatrixKAN, KANLinear, MatrixKANLinear = _load()
 
 assert torch.cuda.is_available(), "Select a GPU runtime (T4) and rerun."
 
@@ -59,7 +66,7 @@ def copy_weights(src: KAN, dst: MatrixKAN) -> None:
     if len(sources) != len(targets):
         raise RuntimeError(f"layer count {len(sources)} != {len(targets)}")
     with torch.no_grad():
-        for left, right in zip(sources, targets):
+        for left, right in zip(sources, targets, strict=True):
             right.base_weight.copy_(left.base_weight)
             right.spline_weight.copy_(left.spline_weight)
             right.grid.copy_(left.grid)

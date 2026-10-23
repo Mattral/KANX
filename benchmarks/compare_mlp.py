@@ -301,6 +301,14 @@ def _specs(smoke: bool) -> list[tuple[str, object]]:
     ]
 
 
+def _mean_attr(rows: list[Result], attr: str) -> float:
+    return float(np.mean([getattr(row, attr) for row in rows]))
+
+
+def _std_attr(rows: list[Result], attr: str) -> float:
+    return _population_std([getattr(row, attr) for row in rows])
+
+
 def _aggregate(groups: list[list[Result]]) -> list[Result]:
     if not groups:
         return []
@@ -313,12 +321,6 @@ def _aggregate(groups: list[list[Result]]) -> list[Result]:
         if len(names) != 1 or len(params) != 1:
             raise SystemExit(f"seed rows disagree at slot {index}")
 
-        def mean_of(attr: str) -> float:
-            return float(np.mean([getattr(row, attr) for row in rows]))
-
-        def std_of(attr: str) -> float:
-            return _population_std([getattr(row, attr) for row in rows])
-
         gpu_values = [row.infer_ms_4k_gpu for row in rows]
         gpu_mean = None
         if all(value is not None for value in gpu_values):
@@ -328,15 +330,15 @@ def _aggregate(groups: list[list[Result]]) -> list[Result]:
             Result(
                 model=base.model,
                 params=base.params,
-                train_s=round(mean_of("train_s"), 3),
-                infer_ms_4k_cpu=round(mean_of("infer_ms_4k_cpu"), 3),
+                train_s=round(_mean_attr(rows, "train_s"), 3),
+                infer_ms_4k_cpu=round(_mean_attr(rows, "infer_ms_4k_cpu"), 3),
                 infer_ms_4k_gpu=gpu_mean,
-                train_mse=mean_of("train_mse"),
-                test_mse=mean_of("test_mse"),
-                train_s_std=std_of("train_s"),
-                infer_ms_4k_cpu_std=std_of("infer_ms_4k_cpu"),
-                train_mse_std=std_of("train_mse"),
-                test_mse_std=std_of("test_mse"),
+                train_mse=_mean_attr(rows, "train_mse"),
+                test_mse=_mean_attr(rows, "test_mse"),
+                train_s_std=_std_attr(rows, "train_s"),
+                infer_ms_4k_cpu_std=_std_attr(rows, "infer_ms_4k_cpu"),
+                train_mse_std=_std_attr(rows, "train_mse"),
+                test_mse_std=_std_attr(rows, "test_mse"),
                 n_seeds=len(rows),
             )
         )
