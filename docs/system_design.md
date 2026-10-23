@@ -68,56 +68,16 @@ model.fit(X_train, y_train, epochs=15)   # resume training
 
 ---
 
-## MatrixKAN: batched B-spline evaluation (v0.2.0)
+## MatrixKAN: experimental (v0.2.1)
 
-Standard `KANLinear` evaluates B-splines via Cox-de Boor recursion, which is inherently sequential in $k$ (recursion depth = polynomial degree). On GPUs, this serializes what should be parallel computation.
+`MatrixKAN` is a PyTorch class whose basis is the same Cox–de Boor recursion as `KANLinear`, with a Python loop over each basis index. `build_recurrence_matrix_batch` is not called. Its entries do not depend on `x`, so it is not the recursion. The 0.2.0 docs described a product of precomputed matrices. The code does not do that.
 
-`MatrixKAN` (PyTorch only) replaces recursion with **precomputed recurrence matrices**:
-
-$$B^{(k)} = B^{(0)} @ M_1 @ M_2 @ \cdots @ M_k \quad \text{(batched einsum)}$$
-
-where $M_p$ is a $(G+p) \times (G+p)$ matrix encoding the $p$-th recursion level.
-
-### Architecture
-
-```
-Input x: (batch, in_features)
-    ↓
-Extend grid by spline_order knots on each side
-    ↓
-Order-0 basis (piecewise constant): (batch, in_features, grid_size+1)
-    ↓
-Apply M_1: (batch, in_features, grid_size)
-    ↓
-Apply M_2: (batch, in_features, grid_size-1)
-    ↓
-...
-    ↓
-Apply M_k: (batch, in_features, grid_size + spline_order - k)
-    ↓
-Final basis: (batch, in_features, num_basis)
-    ↓
-Einsum with spline weights: (batch, out_features)
-```
-
-### Trade-offs
-
-| Aspect | Standard KAN | MatrixKAN |
-|--------|--------------|-----------|
-| **GPU throughput** | 1× (baseline) | slower at hidden width 32, batch 4096, in the quickstart CUDA cell (13.82 ms vs 2.23 ms). Not measured above that width. |
-| **CPU throughput** | 1× | ~1× (comparable) |
-| **Symbolic regression** | ✅ (easy to extract per-edge functions) | ❌ (matrix form less interpretable) |
-| **Memory usage** | Lower | Slightly higher (precomputed matrices) |
-| **Interface** | `KANLinear` | `MatrixKANLinear` (drop-in replacement) |
-
-### Numerical Parity
-
-Tests verify that `MatrixKAN` and standard `KAN` agree to within **atol=1e-4** when initialized with identical seeds and weights.
+On a Tesla T4 (torch 2.11.0+cu130, kanx 0.2.0) that loop is slower than vectorized `KAN` for `[2, width, 1]`, width 32–512, batch 1,024–16,384. The call-time ratio falls from about 6.4× to about 3.3×. Copied weights match the vectorized basis to a max absolute error of 0 on a CPU check of one 32→1 layer. A profiler on that layer, batch 1,024, torch 2.14.1+cpu, counted 1,394 ATen ops against 205.
 
 ### Recommendations
 
-- **Use standard KAN** for symbolic regression, CPU deployment, and as the default until you have a timing
-- **Use MatrixKAN** only after you have timed it on the width and batch you will serve. The width-32 CUDA cell in the quickstart notebook is slower for MatrixKAN
+- Use standard `KAN` as the default.
+- Treat `MatrixKAN` as experimental until a uniform-grid basis, or a fallback for the non-uniform grids `update_grid_from_samples` writes, is implemented and timed.
 
 ---
 

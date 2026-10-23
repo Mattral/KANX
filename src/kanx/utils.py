@@ -40,9 +40,9 @@ def fit_grid_to_data(model, X, pad: float = 0.05) -> tuple[float, float]:
 
     Call this BEFORE training when you know your data range::
 
-        from kanx import KAN
-        from kanx.utils import fit_grid_to_data
+        from kanx import KAN, fit_grid_to_data
         model = KAN([2, 64, 1])
+        model.build((None, 2))
         fit_grid_to_data(model, X_train)
         model.fit(X_train, y_train, epochs=30)
 

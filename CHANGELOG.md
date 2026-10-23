@@ -6,15 +6,20 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-23
+
 ### Fixed
 
-- The README, docs, and quickstart no longer say `MatrixKAN` is ~1.5–2× faster at hidden width 32. The saved CUDA cell in `notebooks/quickstart.ipynb` is 2.23 ms/call for `KAN([2, 32, 1])` and 13.82 ms/call for `MatrixKAN` at batch 4096.
-- Docs now say `prune()` zeros coefficients and leaves the tensor shape unchanged.
-- Docs and the basis comment no longer say the spline is zero outside `[-1, 1]`, or that knot differences underflow in float16. The basis stays float32 because `(x - t_i)` cancels near a knot. The published CPU inference cells that make the smaller KAN slower than the wider one are marked as unusable.
+- `MatrixKAN` is marked experimental. In 0.2.0 the class does not evaluate B-splines with a batched GEMM. `b_spline_basis_matrix` is the Cox–de Boor recursion with a Python loop over each basis index, and `build_recurrence_matrix_batch` is unused. A constant matrix cannot represent that recursion because the weights depend on `x`. The 0.2.0 docstring and README described the GEMM anyway. 0.2.0 stays on PyPI. This release corrects the description. It does not change the forward pass.
+- A Tesla T4 sweep of that loop (torch 2.11.0+cu130, kanx 0.2.0, shape `[2, width, 1]`, width 32–512, batch 1,024–16,384) is slower than vectorized `KAN`. The ratio falls from about 6.4× to about 3.3× and stays there. At width 32 and batch 4,096 the calls are 2.10 ms and 13.37 ms. The JSON is `benchmarks/results/matrixkan_t4_0.2.0.json`.
+- The published CPU table is a warmed three-seed run on an Intel Core i9-9900, TensorFlow 2.21.0. The 0.2.0 single-call columns are not averaged in.
+- The static `fit_grid_to_data` snippet calls `model.build((None, n_features))` first. An unbuilt `KAN` has no layer weights, and `fit_grid_to_data` raises.
+- Docs no longer say the spline is zero outside `[-1, 1]`, or that knot differences underflow in float16. The basis stays float32 because `(x - t_i)` cancels near a knot. Float16's largest finite value is 65504. That is a format limit, not an overflow measured in this contraction. bfloat16 is the practical training dtype because float16 gradients underflow without loss scaling.
+- Docs say `prune()` zeros coefficients and leaves the tensor shape unchanged.
 
-### Added
+### Changed
 
-- The quickstart notebook shows edge pruning, `kanx.viz` edge plots, and a short TensorFlow mixed-precision + XLA fit. The install cell includes `kanx[viz]`.
+- Package version is 0.2.1 in `pyproject.toml`, `kanx.__version__`, `CITATION.cff`, and the Helm chart `appVersion`.
 
 ## [0.2.0] - 2026-10-14
 
@@ -25,6 +30,7 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 - **PyTorch benchmark subprocess.** `benchmarks/real_world.py` trains the PyTorch KAN and MLP in `benchmarks/torch_worker.py` when `--device cuda` is selected, so TensorFlow and PyTorch do not initialize CUDA in one process. CPU runs and `--smoke` stay TensorFlow-only.
 - **Edge visualisation.** `kanx.viz` reads the learned 1-D function on each edge (SiLU residual times the base weight, plus the B-spline). `edge_curves` returns the samples, `plot_edges` draws one panel per edge (`pip install "kanx[viz]"` for matplotlib), and `write_edge_viewer` writes a self-contained HTML page with a layer picker and hover readout. TensorFlow `KAN`, PyTorch `KAN`, and `MatrixKAN` are covered. See `examples/visualize_edges.py` and `notebooks/visualize_edges.ipynb`.
 - **Edge pruning.** `KAN.prune()` and `KANLinear.prune()` on the TensorFlow, PyTorch, and MatrixKAN layers zero an edge when its score is at or below an absolute `threshold` and/or a `relative` fraction of the strongest edge in that layer. Pass `samples` to score each edge by the RMS of its contribution. Pruned spline coefficients and base weights are set to zero.
+- The quickstart notebook shows edge pruning, `kanx.viz` edge plots, and a short TensorFlow mixed-precision + XLA fit. The install cell includes `kanx[viz]`.
 - **CPU benchmark smoke gate.** `python benchmarks/compare_mlp.py --smoke` and `python benchmarks/real_world.py --smoke` train a tiny CPU configuration and exit non-zero when metrics are missing or non-finite. The `benchmark-smoke` GitHub Actions job runs both commands. Smoke mode writes only to `--output` and leaves the committed baseline artifacts in place.
 - `load_california_housing()` now loads NumPy arrays directly, so the real-world smoke gate needs scikit-learn and does not need pandas.
 
@@ -242,7 +248,8 @@ Initial production release.
 - Hand-rolled YAML validator (no pydantic dep in the core library).
 - API uses pydantic only at the request-boundary edge.
 
-[Unreleased]: https://github.com/Mattral/KANX/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/Mattral/KANX/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/Mattral/KANX/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/Mattral/KANX/compare/v0.1.9...v0.2.0
 [0.1.9]: https://github.com/Mattral/KANX/releases/tag/v0.1.9
 [0.1.8]: https://github.com/Mattral/KANX/releases/tag/v0.1.8
