@@ -143,10 +143,10 @@ PyTorch. Both produce models with dynamic batch axes, verified to agree with eag
 inference within $10^{-5}$ absolute error across batch sizes 1 to 1,024. This is the
 first ONNX export path for any KAN library.
 
-The `MatrixKAN` variant in the PyTorch backend replaces the Cox–de Boor recursion
-with precomputed recurrence matrices, enabling batched GEMM operations. On CPU and
-small models (hidden dimension ≤ 32), this is slower than the standard implementation;
-the advantage materialises for larger hidden dimensions on GPU hardware.
+`MatrixKAN` is an experimental PyTorch class. In 0.2.0 its basis is the Cox–de Boor
+recursion written as a Python loop over basis index, not a batched GEMM.
+`build_recurrence_matrix_batch` is unused. A Tesla T4 sweep of that loop stays slower
+than vectorized `KAN` through hidden width 512 and batch 16,384.
 
 ## Quality Infrastructure
 

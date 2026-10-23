@@ -49,7 +49,7 @@ Single source of truth for what's shipped and what's next.
 - ✅ `CHANGELOG.md` (Keep-a-Changelog format)
 - ✅ `notebooks/quickstart.ipynb` — Colab-ready "Train KAN in 2 minutes"
 - ✅ `notebooks/LAUNCH_POST.md` — community launch copy
-- ✅ Benchmark chart (`docs/assets/benchmark.png`) plots the published 100-epoch CPU table. KAN[2,16,1] (432 params, test MSE 2.14×10⁻⁵) is about 26× lower MSE than MLP[2,64,64,1] (4,417 params, 5.51×10⁻⁴). The old 265× headline compared a shorter, unfair run and is withdrawn in `docs/benchmarks.md`.
+- ✅ Benchmark chart (`docs/assets/benchmark.png`) plots the warmed 100-epoch CPU table (three init seeds, Intel Core i9-9900, TensorFlow 2.21.0). KAN[2,32,1] mean test MSE is 1.09×10⁻⁴. MLP[2,64,64,1] is 6.43×10⁻⁴. The old 265× headline compared a shorter, unfair run and stays withdrawn.
 
 ## ✅ Shipped in 0.2.0
 
@@ -63,11 +63,11 @@ real-world benchmark. 0.1.8 added Hub, symbolic regression, TensorBoard, and
 Prometheus. 0.1.9 fixed multi-layer grid updates and the Docker image.
 
 ### New features
-- ✅ **MatrixKAN** (PyTorch): B-spline evaluation via batched GEMM instead of Cox-de Boor recursion. The 0.1.7 notes called this ~1.5–2× faster on GPU. The quickstart notebook's saved CUDA cell at hidden width 32 and batch 4096 measures the opposite (MatrixKAN 13.82 ms/call, standard KAN 2.23 ms/call)
+- ✅ **MatrixKAN** (PyTorch, experimental): same Cox–de Boor basis as `KAN`, looped per basis index. The 0.1.7 notes called this a batched GEMM and ~1.5–2× faster on GPU. The forward pass does not use `build_recurrence_matrix_batch`. A Tesla T4 sweep of the loop (torch 2.11.0+cu130, kanx 0.2.0, shape `[2, width, 1]`, width 32–512, batch 1,024–16,384) is slower. The call-time ratio falls from about 6.4× to about 3.3×.
   - `src/kanx/torch/matrix_kan.py` (MatrixKANLinear, MatrixKAN classes)
   - Numerical parity with standard KAN (within 1e-4)
   - Full test coverage: shape, numerical agreement, GPU throughput, grid updates, ONNX export
-  - **CPU+GPU compatible**: runs on either device. The width-32 CUDA timing above is slower than standard KAN, not faster
+  - **CPU+GPU compatible**: runs on either device. The Tesla T4 sweep above times the Python-loop basis, and that loop is slower than standard KAN
   
 - ✅ **Adaptive grid update** (both TensorFlow + PyTorch): `model.update_grid_from_samples(x, margin=0.01)`
   - Per-feature quantile-based grid recalibration from data statistics

@@ -150,7 +150,7 @@ curl -X POST http://localhost:8000/api/predict \
 
 ## 6. MatrixKAN
 
-`MatrixKAN` replaces B-spline recursion with batched matrix multiplies:
+`MatrixKAN` is experimental. The snippet below only shows the constructor.
 
 ```python
 from kanx.torch import MatrixKAN
@@ -161,7 +161,7 @@ X = torch.randn(1024, 8).cuda()
 y = model(X)
 ```
 
-`MatrixKAN` replaces the Cox–de Boor loop with batched GEMMs. The quickstart notebook's saved CUDA cell, hidden width 32 and batch 4096, measured it slower: 13.82 ms/call against 2.23 ms/call for standard `KAN`. The cell prints `Device: cuda` and does not name the GPU. Use standard `KAN` when you need symbolic regression, and time `MatrixKAN` on the width and batch you will serve.
+Its basis is the Cox–de Boor recursion in a Python loop over each basis index, not a batched GEMM. On a Tesla T4, torch 2.11.0+cu130, kanx 0.2.0, shape `[2, width, 1]`, that loop stays slower from width 32 to 512 and batch 1,024 to 16,384. The call-time ratio falls from about 6.4× to about 3.3×. At width 32 and batch 4,096 the calls are 2.10 ms and 13.37 ms. Use standard `KAN`.
 
 ## 7. Export to ONNX
 

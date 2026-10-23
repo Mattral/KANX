@@ -1,0 +1,40 @@
+{
+  "note": "kanx 0.2.0 MatrixKAN. The basis is Cox-de Boor with a Python loop over each basis index, not a batched GEMM. This run used constructor defaults for grid_size and spline_order, did not copy weights before timing, and did not time backward. benchmarks/matrixkan_t4_sweep.py is the follow-up protocol.",
+  "meta": {
+    "kanx": "0.2.0",
+    "torch": "2.11.0+cu130",
+    "cuda": "13.0",
+    "gpu_torch": "Tesla T4",
+    "nvidia_smi_L": "GPU 0: Tesla T4 (UUID: GPU-618a2a07-ecfc-fa8f-49a9-d0bb110f1589)",
+    "nvidia_smi_query": "Tesla T4, 580.82.07, 15360 MiB",
+    "shape": "[2, width, 1]",
+    "grid_size": 5,
+    "spline_order": 3,
+    "dtype": "float32",
+    "warmup": 10,
+    "reps": 50,
+    "in_features": 2
+  },
+  "rows": [
+    {"width": 32, "batch": 1024, "kan_ms": 2.056, "matrix_ms": 13.171, "matrix_over_kan": 6.408},
+    {"width": 32, "batch": 4096, "kan_ms": 2.1, "matrix_ms": 13.374, "matrix_over_kan": 6.369},
+    {"width": 32, "batch": 8192, "kan_ms": 2.453, "matrix_ms": 13.575, "matrix_over_kan": 5.534},
+    {"width": 32, "batch": 16384, "kan_ms": 4.611, "matrix_ms": 14.953, "matrix_over_kan": 3.243},
+    {"width": 64, "batch": 1024, "kan_ms": 2.071, "matrix_ms": 13.618, "matrix_over_kan": 6.576},
+    {"width": 64, "batch": 4096, "kan_ms": 2.376, "matrix_ms": 13.958, "matrix_over_kan": 5.875},
+    {"width": 64, "batch": 8192, "kan_ms": 4.515, "matrix_ms": 16.221, "matrix_over_kan": 3.593},
+    {"width": 64, "batch": 16384, "kan_ms": 8.804, "matrix_ms": 29.237, "matrix_over_kan": 3.321},
+    {"width": 128, "batch": 1024, "kan_ms": 2.062, "matrix_ms": 13.856, "matrix_over_kan": 6.72},
+    {"width": 128, "batch": 4096, "kan_ms": 4.489, "matrix_ms": 14.901, "matrix_over_kan": 3.319},
+    {"width": 128, "batch": 8192, "kan_ms": 8.704, "matrix_ms": 29.158, "matrix_over_kan": 3.35},
+    {"width": 128, "batch": 16384, "kan_ms": 17.137, "matrix_ms": 56.47, "matrix_over_kan": 3.295},
+    {"width": 256, "batch": 1024, "kan_ms": 2.352, "matrix_ms": 13.506, "matrix_over_kan": 5.743},
+    {"width": 256, "batch": 4096, "kan_ms": 8.669, "matrix_ms": 29.178, "matrix_over_kan": 3.366},
+    {"width": 256, "batch": 8192, "kan_ms": 17.03, "matrix_ms": 56.449, "matrix_over_kan": 3.315},
+    {"width": 256, "batch": 16384, "kan_ms": 33.765, "matrix_ms": 110.984, "matrix_over_kan": 3.287},
+    {"width": 512, "batch": 1024, "kan_ms": 4.471, "matrix_ms": 14.898, "matrix_over_kan": 3.332},
+    {"width": 512, "batch": 4096, "kan_ms": 16.994, "matrix_ms": 56.401, "matrix_over_kan": 3.319},
+    {"width": 512, "batch": 8192, "kan_ms": 33.643, "matrix_ms": 110.748, "matrix_over_kan": 3.292},
+    {"width": 512, "batch": 16384, "kan_ms": 67.042, "matrix_ms": 219.082, "matrix_over_kan": 3.268}
+  ]
+}

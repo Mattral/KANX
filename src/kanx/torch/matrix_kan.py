@@ -1,13 +1,15 @@
-"""MatrixKAN: B-spline evaluation via batched matrix multiply.
+"""MatrixKAN: experimental PyTorch path. Same Cox–de Boor basis as ``KAN``.
 
-Speed is not established. The quickstart CUDA cell at hidden width 32 and
-batch 4096 measured this path slower than the recursive KAN (13.82 ms vs
-2.23 ms per call).
+``b_spline_basis_matrix`` runs the same recurrence as ``b_spline_basis``,
+with a Python loop over each basis index. The forward pass does not call
+``build_recurrence_matrix_batch``. That helper is not a batched GEMM of the
+recursion: the Cox–de Boor weights depend on ``x``, and a constant matrix
+cannot represent them.
 
-Key design: replaces Cox-de Boor recursion with vectorized batched GEMM.
-For spline_order k and grid_size G, precomputes recurrence matrices M_1..M_k
-then evaluates all B-spline bases via: B = x_augmented @ M_1 @ M_2 @ ... @ M_k
-This reduces the forward pass to k dense matrix multiplies.
+A Tesla T4 sweep of this loop (kanx 0.2.0, torch 2.11.0+cu130, shape
+``[2, width, 1]``, width 32–512, batch 1,024–16,384) is slower than the
+vectorized ``KAN``. The call-time ratio falls from about 6.4× to about 3.3×.
+That ratio describes this implementation, not a matrix algorithm.
 """
 from __future__ import annotations
 
@@ -35,7 +37,12 @@ def extend_grid_matrix(grid: torch.Tensor, k: int) -> torch.Tensor:
 
 
 def build_recurrence_matrix_batch(grid_ext: torch.Tensor, k: int, order: int) -> torch.Tensor:
-    """Precompute recurrence matrix for one recursion level.
+    """Unused by the forward pass.
+
+    The entries do not depend on ``x``. The Cox–de Boor weights do, so this
+    tensor is not the recursion. Kept so older imports still resolve.
+
+    Precompute recurrence matrix for one recursion level.
 
     Args:
         grid_ext: (in_features, num_grid_points)
@@ -77,7 +84,7 @@ def build_recurrence_matrix_batch(grid_ext: torch.Tensor, k: int, order: int) ->
 
 
 def b_spline_basis_matrix(x: torch.Tensor, grid_ext: torch.Tensor, spline_order: int) -> torch.Tensor:
-    """Compute B-spline basis via batched matrix multiply (no recursion).
+    """Cox–de Boor basis, with a Python loop over each basis index.
 
     Cox-de Boor recursion: B_i^0(x) = [grid_i <= x < grid_{i+1}]
                            B_i^k(x) = (x - grid_i)/(grid_{i+k} - grid_i) * B_i^{k-1}(x)
@@ -134,7 +141,7 @@ def b_spline_basis_matrix(x: torch.Tensor, grid_ext: torch.Tensor, spline_order:
 
 
 class MatrixKANLinear(nn.Module):
-    """GPU-friendly KAN edge: vectorized B-spline via batched matmul."""
+    """Experimental KAN edge. The basis is Cox–de Boor, looped per index."""
 
     def __init__(
         self,
@@ -184,7 +191,7 @@ class MatrixKANLinear(nn.Module):
             self.register_buffer("grid", grid_init)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Compute KAN forward pass using vectorized B-spline basis.
+        """KAN forward pass. The spline basis is the loop in ``b_spline_basis_matrix``.
 
         Args:
             x: (batch, in_features)
@@ -196,7 +203,7 @@ class MatrixKANLinear(nn.Module):
         base_out = self.base_activation(x) @ self.base_weight
         base_out = base_out * self.scale_base
 
-        # Spline branch: vectorized basis via matrix multiply
+        # Spline branch: Cox–de Boor, one Python iteration per basis index.
         grid_ext = extend_grid_matrix(self.grid, self.spline_order)
         basis = b_spline_basis_matrix(x, grid_ext, self.spline_order)  # (batch, in_features, num_basis)
 
@@ -294,7 +301,7 @@ class MatrixKANLinear(nn.Module):
 
 
 class MatrixKAN(nn.Sequential):
-    """KAN model using MatrixKANLinear layers. Same interface as ``KAN``."""
+    """Experimental model of ``MatrixKANLinear`` layers. Same constructor as ``KAN``."""
 
     def __init__(
         self,

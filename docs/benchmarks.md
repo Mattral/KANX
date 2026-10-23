@@ -5,32 +5,35 @@
 ## Setup
 
 - **Target.** `y = sin(π·x₁) + cos(2π·x₂)` — *deliberately smooth & separable*; this is the regime where KANs are theoretically optimal (Liu et al. 2024). **Real-world targets are not this smooth.**
-- **Data.** 4 096 train / 1 024 test, uniform on `[-1, 1]²`, seed=0.
+- **Data.** 4 096 train / 1 024 test, uniform on `[-1, 1]²`, train seed 0 and test seed 1, shared across init seeds 0, 1, and 2.
 - **Training.** Adam(lr=1e-2), batch=128, **100 epochs** (fixed).
-- **Hardware.** aarch64 / Linux / Python 3.11.15 / TF 2.21.0, CPU.
+- **Inference.** 10 untimed forwards, then the median of 20. Each sample ends in `.numpy()`. The ± is the population standard deviation across seeds.
+- **Hardware.** Intel Core i9-9900 at 3.10 GHz / AMD64 / Windows / Python 3.11.17 / TF 2.21.0, CPU.
 
 ## Results
 
-| Model            | Params | Train (s) | Infer 4k (ms) | Train MSE | **Test MSE** |
-|------------------|------:|---------:|-------------:|---------:|-------------:|
-| KAN[2,16,1]      |   432 |    12.50 |       68.64 | 2.17e-05 | **2.14e-05** |
-| KAN[2,32,1]      |   864 |    16.62 |       25.52 | 4.50e-04 | **4.44e-04** |
-| MLP[2,32,1]      |   129 |     5.07 |        6.17 | 4.74e-01 | **4.61e-01** |
-| MLP[2,16,16,1]   |   337 |     5.46 |        4.08 | 1.44e-03 | **1.60e-03** |
-| MLP[2,64,64,1]   |  4417 |     6.00 |        5.74 | 4.76e-04 | **5.51e-04** |
+The canonical table is [`benchmarks/results.md`](https://github.com/Mattral/KANX/blob/main/benchmarks/results.md). Means from that run:
+
+| Model | Params | Train (s) | Infer 4k (ms) | **Test MSE** |
+|---|---:|---:|---:|---:|
+| KAN[2,16,1] | 432 | 9.42 ± 0.12 | 26.72 ± 0.31 | 2.58×10⁻⁴ ± 1.71×10⁻⁴ |
+| KAN[2,32,1] | 864 | 11.12 ± 0.18 | 29.15 ± 0.46 | **1.09×10⁻⁴ ± 6.34×10⁻⁵** |
+| MLP[2,32,1] | 129 | 6.09 ± 0.07 | 2.06 ± 0.03 | 4.62×10⁻¹ ± 1.40×10⁻³ |
+| MLP[2,16,16,1] | 337 | 6.78 ± 0.23 | 2.90 ± 0.05 | 1.44×10⁻³ ± 3.83×10⁻⁴ |
+| MLP[2,64,64,1] | 4417 | 7.00 ± 0.07 | 3.53 ± 0.05 | 6.43×10⁻⁴ ± 4.02×10⁻⁴ |
 
 ## What this benchmark honestly shows
 
-- On a **smooth separable 2-D regression**, parameter-matched KAN and MLP are roughly comparable, with KANs sometimes winning by a small margin.
+- On a **smooth separable 2-D regression**, the wider KAN has the lower mean test MSE. The smaller KAN's error moves by about as much as its mean across seeds.
 - The previous headline claim ('265× lower MSE than MLP[2,64,64,1]') compared KAN[2,32,1] (864 params) against a deliberately **5× over-parameterised** MLP that was trained for only 30 epochs. That comparison was unfair on two axes.
-- **Compute cost.** Per-edge B-spline evaluation does more work per parameter than a matmul plus an activation. The ~3–5× summary lives in `benchmarks/results.md`. It is not a ratio from the table on this page.
+- **Compute cost.** On this run, warmed inference for KAN[2,16,1] is 7.57× MLP[2,64,64,1]. That ratio is this machine and this protocol. The older ~3–5× line described an unwarmed single call and is withdrawn.
 
 ## Caveats
 
 - This benchmark is **best-case** for KANs (the target is exactly the kind of function the Kolmogorov-Arnold representation theorem applies to). On real tabular or vision data, the picture is far more nuanced.
 - We do **not** claim KANs are universally better than MLPs.
 - For non-smooth or high-dimensional targets, an MLP will typically beat a same-size KAN on both accuracy and throughput.
-- The inference column is not a ranking. KAN[2,16,1] at 68.64 ms is slower than KAN[2,32,1] at 25.52 ms, which is the wrong direction for model size. `benchmarks/results.md` is a second run of the same setup (43.59 ms and 31.61 ms) and has the same inversion. Do not quote either cell as a cost.
+- The 0.2.0 tables each published one unwarmed forward. Those columns disagreed with each other and are not averaged into this table.
 
 ## Real-world tabular benchmarks (new)
 
