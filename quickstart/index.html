@@ -541,10 +541,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#6-gpu-optimized-matrixkan" class="md-nav__link">
+  <a href="#6-matrixkan" class="md-nav__link">
     <span class="md-ellipsis">
       
-        6. GPU-Optimized MatrixKAN
+        6. MatrixKAN
       
     </span>
   </a>
@@ -1457,10 +1457,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#6-gpu-optimized-matrixkan" class="md-nav__link">
+  <a href="#6-matrixkan" class="md-nav__link">
     <span class="md-ellipsis">
       
-        6. GPU-Optimized MatrixKAN
+        6. MatrixKAN
       
     </span>
   </a>
@@ -1634,8 +1634,8 @@ anywhere with a single line.</p>
 </span></code></pre></div>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="p">{</span><span class="w"> </span><span class="nt">"output"</span><span class="p">:</span><span class="w"> </span><span class="p">[[</span><span class="mf">0.31</span><span class="p">],</span><span class="w"> </span><span class="p">[</span><span class="mf">0.84</span><span class="p">]],</span><span class="w"> </span><span class="nt">"shape"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">],</span><span class="w"> </span><span class="nt">"inference_ms"</span><span class="p">:</span><span class="w"> </span><span class="mf">22.4</span><span class="w"> </span><span class="p">}</span>
 </span></code></pre></div>
-<h2 id="6-gpu-optimized-matrixkan">6. GPU-Optimized MatrixKAN<a class="headerlink" href="#6-gpu-optimized-matrixkan" title="Permanent link">#</a></h2>
-<p>For higher throughput on GPUs, use the vectorized <code>MatrixKAN</code> — replaces B-spline recursion with batched matrix multiplies:</p>
+<h2 id="6-matrixkan">6. MatrixKAN<a class="headerlink" href="#6-matrixkan" title="Permanent link">#</a></h2>
+<p><code>MatrixKAN</code> is experimental. The snippet below only shows the constructor.</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">kanx.torch</span><span class="w"> </span><span class="kn">import</span> <span class="n">MatrixKAN</span>
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
 </span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>
@@ -1643,7 +1643,7 @@ anywhere with a single line.</p>
 </span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="n">X</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">1024</span><span class="p">,</span> <span class="mi">8</span><span class="p">)</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
 </span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="n">y</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
 </span></code></pre></div>
-<p>On GPU, <code>MatrixKAN</code> is ~1.5–2× faster than standard <code>KAN</code> due to vectorized GEMM operations. CPU performance is comparable. Use standard <code>KAN</code> if you need symbolic regression hooks; use <code>MatrixKAN</code> for inference-only production.</p>
+<p>Its basis is the Cox–de Boor recursion in a Python loop over each basis index, not a batched GEMM. On a Tesla T4, torch 2.11.0+cu130, kanx 0.2.0, shape <code>[2, width, 1]</code>, that loop stays slower from width 32 to 512 and batch 1,024 to 16,384. The call-time ratio falls from about 6.4× to about 3.3×. At width 32 and batch 4,096 the calls are 2.10 ms and 13.37 ms. Use standard <code>KAN</code>.</p>
 <h2 id="7-export-to-onnx">7. Export to ONNX<a class="headerlink" href="#7-export-to-onnx" title="Permanent link">#</a></h2>
 <div class="tabbed-set tabbed-alternate" data-tabs="3:2"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">From PyTorch</label><label for="__tabbed_3_2">From TensorFlow</label></div>
 <div class="tabbed-content">

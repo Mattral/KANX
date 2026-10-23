@@ -1705,7 +1705,7 @@
 <li>✅ <code>CHANGELOG.md</code> (Keep-a-Changelog format)</li>
 <li>✅ <code>notebooks/quickstart.ipynb</code> — Colab-ready "Train KAN in 2 minutes"</li>
 <li>✅ <code>notebooks/LAUNCH_POST.md</code> — community launch copy</li>
-<li>✅ Benchmark chart (<code>docs/assets/benchmark.png</code>) plots the published 100-epoch CPU table. KAN[2,16,1] (432 params, test MSE 2.14×10⁻⁵) is about 26× lower MSE than MLP[2,64,64,1] (4,417 params, 5.51×10⁻⁴). The old 265× headline compared a shorter, unfair run and is withdrawn in <code>docs/benchmarks.md</code>.</li>
+<li>✅ Benchmark chart (<code>docs/assets/benchmark.png</code>) plots the warmed 100-epoch CPU table (three init seeds, Intel Core i9-9900, TensorFlow 2.21.0). KAN[2,32,1] mean test MSE is 1.09×10⁻⁴. MLP[2,64,64,1] is 6.43×10⁻⁴. The old 265× headline compared a shorter, unfair run and stays withdrawn.</li>
 </ul>
 <h2 id="shipped-in-020">✅ Shipped in 0.2.0<a class="headerlink" href="#shipped-in-020" title="Permanent link">#</a></h2>
 <p>Package 0.2.0 collects the work after 0.1.9: edge pruning, <code>kanx.viz</code>, the PyTorch GPU benchmark subprocess, mixed precision and XLA, the Helm chart, and the distributed smoke tests. Those items are checked off below.</p>
@@ -1716,12 +1716,12 @@ real-world benchmark. 0.1.8 added Hub, symbolic regression, TensorBoard, and
 Prometheus. 0.1.9 fixed multi-layer grid updates and the Docker image.</p>
 <h3 id="new-features">New features<a class="headerlink" href="#new-features" title="Permanent link">#</a></h3>
 <ul>
-<li>✅ <strong>MatrixKAN</strong> (GPU-optimized, PyTorch): B-spline evaluation via batched GEMM instead of Cox-de Boor recursion; ~1.5–2× faster on GPU</li>
+<li>✅ <strong>MatrixKAN</strong> (PyTorch, experimental): same Cox–de Boor basis as <code>KAN</code>, looped per basis index. The 0.1.7 notes called this a batched GEMM and ~1.5–2× faster on GPU. The forward pass does not use <code>build_recurrence_matrix_batch</code>. A Tesla T4 sweep of the loop (torch 2.11.0+cu130, kanx 0.2.0, shape <code>[2, width, 1]</code>, width 32–512, batch 1,024–16,384) is slower. The call-time ratio falls from about 6.4× to about 3.3×.</li>
 <li><code>src/kanx/torch/matrix_kan.py</code> (MatrixKANLinear, MatrixKAN classes)</li>
 <li>Numerical parity with standard KAN (within 1e-4)</li>
 <li>Full test coverage: shape, numerical agreement, GPU throughput, grid updates, ONNX export</li>
 <li>
-<p><strong>CPU+GPU compatible</strong>: Fast on GPU, performance comparable to KAN on CPU</p>
+<p><strong>CPU+GPU compatible</strong>: runs on either device. The Tesla T4 sweep above times the Python-loop basis, and that loop is slower than standard KAN</p>
 </li>
 <li>
 <p>✅ <strong>Adaptive grid update</strong> (both TensorFlow + PyTorch): <code>model.update_grid_from_samples(x, margin=0.01)</code></p>

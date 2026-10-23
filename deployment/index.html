@@ -1586,7 +1586,7 @@ projects: every PR has a compiled, served, predict-able artifact.</p>
 into your existing TLS termination.</p>
 <h2 id="helm">Helm<a class="headerlink" href="#helm" title="Permanent link">#</a></h2>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>helm<span class="w"> </span>install<span class="w"> </span>kanx-api<span class="w"> </span>charts/kanx
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>--install<span class="w"> </span>kanx-api<span class="w"> </span>charts/kanx<span class="w"> </span>--set<span class="w"> </span>image.tag<span class="o">=</span><span class="m">0</span>.2.0
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>--install<span class="w"> </span>kanx-api<span class="w"> </span>charts/kanx<span class="w"> </span>--set<span class="w"> </span>image.tag<span class="o">=</span><span class="m">0</span>.2.1
 </span></code></pre></div>
 <p><code>charts/kanx</code> parameterizes the image, replica count, resources, probes, CPU
 HPA, model PVC, and Ingress. Defaults match <code>k8s/</code>. The raw manifests still

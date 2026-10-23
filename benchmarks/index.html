@@ -1436,11 +1436,13 @@
 <h2 id="setup">Setup<a class="headerlink" href="#setup" title="Permanent link">#</a></h2>
 <ul>
 <li><strong>Target.</strong> <code>y = sin(π·x₁) + cos(2π·x₂)</code> — <em>deliberately smooth &amp; separable</em>; this is the regime where KANs are theoretically optimal (Liu et al. 2024). <strong>Real-world targets are not this smooth.</strong></li>
-<li><strong>Data.</strong> 4 096 train / 1 024 test, uniform on <code>[-1, 1]²</code>, seed=0.</li>
+<li><strong>Data.</strong> 4 096 train / 1 024 test, uniform on <code>[-1, 1]²</code>, train seed 0 and test seed 1, shared across init seeds 0, 1, and 2.</li>
 <li><strong>Training.</strong> Adam(lr=1e-2), batch=128, <strong>100 epochs</strong> (fixed).</li>
-<li><strong>Hardware.</strong> aarch64 / Linux / Python 3.11.15 / TF 2.21.0, CPU.</li>
+<li><strong>Inference.</strong> 10 untimed forwards, then the median of 20. Each sample ends in <code>.numpy()</code>. The ± is the population standard deviation across seeds.</li>
+<li><strong>Hardware.</strong> Intel Core i9-9900 at 3.10 GHz / AMD64 / Windows / Python 3.11.17 / TF 2.21.0, CPU.</li>
 </ul>
 <h2 id="results">Results<a class="headerlink" href="#results" title="Permanent link">#</a></h2>
+<p>The canonical table is <a href="https://github.com/Mattral/KANX/blob/main/benchmarks/results.md"><code>benchmarks/results.md</code></a>. Means from that run:</p>
 <table>
 <thead>
 <tr>
@@ -1448,7 +1450,6 @@
 <th style="text-align: right;">Params</th>
 <th style="text-align: right;">Train (s)</th>
 <th style="text-align: right;">Infer 4k (ms)</th>
-<th style="text-align: right;">Train MSE</th>
 <th style="text-align: right;"><strong>Test MSE</strong></th>
 </tr>
 </thead>
@@ -1456,56 +1457,52 @@
 <tr>
 <td>KAN[2,16,1]</td>
 <td style="text-align: right;">432</td>
-<td style="text-align: right;">12.50</td>
-<td style="text-align: right;">68.64</td>
-<td style="text-align: right;">2.17e-05</td>
-<td style="text-align: right;"><strong>2.14e-05</strong></td>
+<td style="text-align: right;">9.42 ± 0.12</td>
+<td style="text-align: right;">26.72 ± 0.31</td>
+<td style="text-align: right;">2.58×10⁻⁴ ± 1.71×10⁻⁴</td>
 </tr>
 <tr>
 <td>KAN[2,32,1]</td>
 <td style="text-align: right;">864</td>
-<td style="text-align: right;">16.62</td>
-<td style="text-align: right;">25.52</td>
-<td style="text-align: right;">4.50e-04</td>
-<td style="text-align: right;"><strong>4.44e-04</strong></td>
+<td style="text-align: right;">11.12 ± 0.18</td>
+<td style="text-align: right;">29.15 ± 0.46</td>
+<td style="text-align: right;"><strong>1.09×10⁻⁴ ± 6.34×10⁻⁵</strong></td>
 </tr>
 <tr>
 <td>MLP[2,32,1]</td>
 <td style="text-align: right;">129</td>
-<td style="text-align: right;">5.07</td>
-<td style="text-align: right;">6.17</td>
-<td style="text-align: right;">4.74e-01</td>
-<td style="text-align: right;"><strong>4.61e-01</strong></td>
+<td style="text-align: right;">6.09 ± 0.07</td>
+<td style="text-align: right;">2.06 ± 0.03</td>
+<td style="text-align: right;">4.62×10⁻¹ ± 1.40×10⁻³</td>
 </tr>
 <tr>
 <td>MLP[2,16,16,1]</td>
 <td style="text-align: right;">337</td>
-<td style="text-align: right;">5.46</td>
-<td style="text-align: right;">4.08</td>
-<td style="text-align: right;">1.44e-03</td>
-<td style="text-align: right;"><strong>1.60e-03</strong></td>
+<td style="text-align: right;">6.78 ± 0.23</td>
+<td style="text-align: right;">2.90 ± 0.05</td>
+<td style="text-align: right;">1.44×10⁻³ ± 3.83×10⁻⁴</td>
 </tr>
 <tr>
 <td>MLP[2,64,64,1]</td>
 <td style="text-align: right;">4417</td>
-<td style="text-align: right;">6.00</td>
-<td style="text-align: right;">5.74</td>
-<td style="text-align: right;">4.76e-04</td>
-<td style="text-align: right;"><strong>5.51e-04</strong></td>
+<td style="text-align: right;">7.00 ± 0.07</td>
+<td style="text-align: right;">3.53 ± 0.05</td>
+<td style="text-align: right;">6.43×10⁻⁴ ± 4.02×10⁻⁴</td>
 </tr>
 </tbody>
 </table>
 <h2 id="what-this-benchmark-honestly-shows">What this benchmark honestly shows<a class="headerlink" href="#what-this-benchmark-honestly-shows" title="Permanent link">#</a></h2>
 <ul>
-<li>On a <strong>smooth separable 2-D regression</strong>, parameter-matched KAN and MLP are roughly comparable, with KANs sometimes winning by a small margin.</li>
+<li>On a <strong>smooth separable 2-D regression</strong>, the wider KAN has the lower mean test MSE. The smaller KAN's error moves by about as much as its mean across seeds.</li>
 <li>The previous headline claim ('265× lower MSE than MLP[2,64,64,1]') compared KAN[2,32,1] (864 params) against a deliberately <strong>5× over-parameterised</strong> MLP that was trained for only 30 epochs. That comparison was unfair on two axes.</li>
-<li><strong>Compute cost.</strong> KAN inference is consistently ~3–5× slower than an equivalent-MSE MLP on CPU, because per-edge B-spline evaluation does more work per parameter than a matmul + activation.</li>
+<li><strong>Compute cost.</strong> On this run, warmed inference for KAN[2,16,1] is 7.57× MLP[2,64,64,1]. That ratio is this machine and this protocol. The older ~3–5× line described an unwarmed single call and is withdrawn.</li>
 </ul>
 <h2 id="caveats">Caveats<a class="headerlink" href="#caveats" title="Permanent link">#</a></h2>
 <ul>
 <li>This benchmark is <strong>best-case</strong> for KANs (the target is exactly the kind of function the Kolmogorov-Arnold representation theorem applies to). On real tabular or vision data, the picture is far more nuanced.</li>
 <li>We do <strong>not</strong> claim KANs are universally better than MLPs.</li>
 <li>For non-smooth or high-dimensional targets, an MLP will typically beat a same-size KAN on both accuracy and throughput.</li>
+<li>The 0.2.0 tables each published one unwarmed forward. Those columns disagreed with each other and are not averaged into this table.</li>
 </ul>
 <h2 id="real-world-tabular-benchmarks-new">Real-world tabular benchmarks (new)<a class="headerlink" href="#real-world-tabular-benchmarks-new" title="Permanent link">#</a></h2>
 <p>We ran 5-fold cross-validated real-world tabular benchmarks on three UCI datasets (California Housing, Concrete Strength, Energy Efficiency). CPU runs stay on the TensorFlow KAN. <code>python benchmarks/real_world.py --device cuda</code> trains the PyTorch KAN and MLP in a child process so TensorFlow and PyTorch do not initialize CUDA together.</p>

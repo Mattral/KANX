@@ -1247,10 +1247,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#gpu-optimized-matrixkan" class="md-nav__link">
+  <a href="#matrixkan" class="md-nav__link">
     <span class="md-ellipsis">
       
-        ⚡ GPU-optimized MatrixKAN
+        ⚡ MatrixKAN
       
     </span>
   </a>
@@ -1473,12 +1473,13 @@ One library. Two backends. Real ONNX export. Docker + Kubernetes ready. Promethe
 </span></code></pre></div>
 <blockquote>
 <p><strong>⚠️ Grid calibration — two methods</strong></p>
-<p>KANs use B-splines on a fixed input range (default <code>[-1, 1]</code>). If your inputs fall outside that range, the spline path <strong>silently returns zero</strong> and you only get the SiLU residual. Fix it one of two ways:</p>
+<p>The stored knots default to <code>[-1, 1]</code> (<code>grid_size=5</code> is six knots, spacing 0.4). <code>extend_grid</code> adds <code>spline_order</code> knots of that spacing on each side, so the default cubic basis runs out to about ±2.2. The basis sums to 1 on the stored interval, is still nonzero at 1.7 (the sum is about 0.32), and is exactly zero at and beyond the outermost knot. Past that knot the layer is only the SiLU residual. Put the stored interval on the data one of two ways:</p>
 <p><strong>Static approach</strong> (pre-training):
 <div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">kanx</span><span class="w"> </span><span class="kn">import</span> <span class="n">KAN</span><span class="p">,</span> <span class="n">fit_grid_to_data</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">model</span> <span class="o">=</span> <span class="n">KAN</span><span class="p">([</span><span class="n">n_features</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">fit_grid_to_data</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">X_train</span><span class="p">)</span>              <span class="c1"># one-time grid fit</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">epochs</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">model</span><span class="o">.</span><span class="n">build</span><span class="p">((</span><span class="kc">None</span><span class="p">,</span> <span class="n">n_features</span><span class="p">))</span>               <span class="c1"># weights exist only after build</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">fit_grid_to_data</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">X_train</span><span class="p">)</span>              <span class="c1"># one-time grid fit</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">epochs</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>
 </span></code></pre></div></p>
 <p><strong>Adaptive approach</strong> (during training — recommended):
 <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">model</span> <span class="o">=</span> <span class="n">KAN</span><span class="p">([</span><span class="n">n_features</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
@@ -1486,11 +1487,11 @@ One library. Two backends. Real ONNX export. Docker + Kubernetes ready. Promethe
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">model</span><span class="o">.</span><span class="n">update_grid_from_samples</span><span class="p">(</span><span class="n">X_train</span><span class="p">)</span>       <span class="c1"># ← refine grid based on data</span>
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">epochs</span><span class="o">=</span><span class="mi">15</span><span class="p">)</span>        <span class="c1"># continue training</span>
 </span></code></pre></div></p>
-<p><code>kanx.check_input_range(model, X)</code> will log a warning at inference if input exceeds the grid.</p>
+<p><code>kanx.check_input_range(model, X)</code> logs a warning when a row leaves the stored grid. That boundary is the interval you fit, which is stricter than the hard zero at the outermost knot.</p>
 </blockquote>
-<p>Drop edges that barely contribute. <code>threshold</code> is an absolute cutoff on the edge score. <code>relative</code> drops edges at or below that fraction of the strongest edge in the same layer. Pass <code>samples</code> to score each edge by its RMS on real inputs. The same method is on the PyTorch <code>KAN</code> and on <code>MatrixKAN</code>.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">model</span><span class="o">.</span><span class="n">prune</span><span class="p">(</span><span class="n">relative</span><span class="o">=</span><span class="mf">0.01</span><span class="p">)</span>                  <span class="c1"># keep edges above 1% of the peak</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">model</span><span class="o">.</span><span class="n">prune</span><span class="p">(</span><span class="n">threshold</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span> <span class="n">samples</span><span class="o">=</span><span class="n">X_train</span><span class="p">)</span>
+<p>Zero out edges that barely contribute. <code>prune</code> sets the spline coefficients and the base weight to zero. It does not remove the slot, and the contraction still visits it. <code>threshold</code> is an absolute cutoff on the edge score. <code>relative</code> zeros edges at or below that fraction of the strongest edge in the same layer. Pass <code>samples</code> to score each edge by its RMS on real inputs. The same method is on the PyTorch <code>KAN</code> and on <code>MatrixKAN</code>.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">model</span><span class="o">.</span><span class="n">prune</span><span class="p">(</span><span class="n">relative</span><span class="o">=</span><span class="mf">0.01</span><span class="p">)</span>                    <span class="c1"># zero edges at or below 1% of the peak</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">model</span><span class="o">.</span><span class="n">prune</span><span class="p">(</span><span class="n">threshold</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span> <span class="n">samples</span><span class="o">=</span><span class="n">X_train</span><span class="p">)</span>  <span class="c1"># coefficients become zero; shapes stay</span>
 </span></code></pre></div>
 <p>Plot what is left. Each edge is a learned 1-D function (SiLU residual plus B-spline). <code>plot_edges</code> needs matplotlib (<code>pip install "kanx[viz]"</code>). <code>write_edge_viewer</code> writes a single HTML file with a layer picker and a hover readout.</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">kanx.viz</span><span class="w"> </span><span class="kn">import</span> <span class="n">plot_edges</span><span class="p">,</span> <span class="n">write_edge_viewer</span>
@@ -1502,8 +1503,8 @@ One library. Two backends. Real ONNX export. Docker + Kubernetes ready. Promethe
   <img src="../assets/edge_functions.png" alt="Learned edge functions on a two-input KAN" width="640"/>
 </p>
 
-<p>Layer 0 of a <code>KAN([2, 1])</code> fit to <code>sin(π x₁) + 0.6 x₂²</code>. The first edge carries the sine. The second carries the quadratic.</p>
-<p>The TensorFlow spline contraction can run in reduced precision, and the forward pass can be XLA-compiled. Weights and the returned tensor stay float32. The Cox-de Boor basis stays float32 as well: knot differences underflow in float16.</p>
+<p>Layer 0 of a <code>KAN([2, 1])</code> fit to <code>sin(π x₁) + 0.6 x₂²</code>. The left edge follows the sine. The right edge follows a bowl. That is a reading of this plot. It is not a proof that each edge owns one term, and a shorter fit of the same target can leave the right side of the bowl unfinished.</p>
+<p>The TensorFlow spline contraction can run in reduced precision, and the forward pass can be XLA-compiled. Weights and the returned tensor stay float32. The Cox–de Boor basis stays float32 because <code>(x − tᵢ)</code> cancels near a knot and the divided differences amplify the error. bfloat16 has fewer mantissa bits than float16 (8 versus 11), so it is the worse choice for the basis. Float16's largest finite value is 65504. That is a property of the format, not an overflow measured in this contraction: on these knots the cubic basis peaks at 2/3, and the coefficients start small. bfloat16 is the practical training dtype because float16 gradients underflow when training does not use loss scaling. Knot spacing does not underflow in float16 at grid size 5 (spacing 0.4) or at grid size 1000 (spacing 0.002). Against a float64 <code>b_spline_basis</code> on the same extended knots, the max absolute error is 1.9×10⁻⁷ in float32 and 1.5×10⁻³ in float16 at grid size 5 (1.2×10⁻² in bfloat16). At grid size 1000 it is 2.5×10⁻⁵, 0.16, and 0.67. The grid-size-1000 gap is mostly the input rounding onto a step comparable to the 0.002 knot spacing.</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">model</span> <span class="o">=</span> <span class="n">KAN</span><span class="p">([</span><span class="mi">8</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">precision</span><span class="o">=</span><span class="s2">"bfloat16"</span><span class="p">,</span> <span class="n">jit_compile</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </span></code></pre></div>
 <p><code>precision</code> is <code>float32</code> (default), <code>float16</code>, or <code>bfloat16</code>. <code>jit_compile=True</code> compiles on the first call. Batch size may change; the feature width may not. The same arguments exist on <code>KANLinear</code>. PyTorch is unchanged. Do not export a <code>jit_compile=True</code> layer to ONNX; trace the default float32 layer instead. Reduced precision is close to float32, not bit-exact. bfloat16 is the practical training dtype.</p>
@@ -1527,13 +1528,62 @@ One library. Two backends. Real ONNX export. Docker + Kubernetes ready. Promethe
 </span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">epochs</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">lr</span><span class="o">=</span><span class="mf">1e-2</span><span class="p">)</span>             <span class="c1"># one-liner, same semantics</span>
 </span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">([[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">]])</span>
 </span></code></pre></div>
-<h3 id="gpu-optimized-matrixkan">⚡ GPU-optimized MatrixKAN<a class="headerlink" href="#gpu-optimized-matrixkan" title="Permanent link">#</a></h3>
-<p>For higher throughput on accelerators, use the vectorized <code>MatrixKAN</code> (replaces recursion with batched GEMM):</p>
+<h3 id="matrixkan">⚡ MatrixKAN<a class="headerlink" href="#matrixkan" title="Permanent link">#</a></h3>
+<p><code>MatrixKAN</code> is experimental. It evaluates the same Cox–de Boor basis as <code>KAN</code>, with a Python loop over each basis index. <code>build_recurrence_matrix_batch</code> is not used, and a constant matrix cannot represent the recursion because the weights depend on <code>x</code>. The 0.2.0 docstring called this a batched GEMM. That description was wrong.</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">kanx.torch</span><span class="w"> </span><span class="kn">import</span> <span class="n">MatrixKAN</span>
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="n">model</span> <span class="o">=</span> <span class="n">MatrixKAN</span><span class="p">([</span><span class="mi">4</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>  <span class="c1"># same interface as KAN</span>
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">epochs</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>      <span class="c1"># ~1.5–2× faster on GPU vs standard KAN</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="n">model</span> <span class="o">=</span> <span class="n">MatrixKAN</span><span class="p">([</span><span class="mi">2</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">grid_size</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">spline_order</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
 </span></code></pre></div>
+<p>The table below times that loop, not a matrix algorithm. Tesla T4, torch 2.11.0+cu130, kanx 0.2.0, float32, grid size 5, spline order 3, shape <code>[2, width, 1]</code>. Ten warmup calls, then the mean of 50, with <code>torch.cuda.synchronize</code> around the loop. Cells are MatrixKAN milliseconds divided by KAN milliseconds. The JSON is <code>benchmarks/results/matrixkan_t4_0.2.0.json</code>.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">width \ batch</th>
+<th style="text-align: right;">1,024</th>
+<th style="text-align: right;">4,096</th>
+<th style="text-align: right;">8,192</th>
+<th style="text-align: right;">16,384</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">32</td>
+<td style="text-align: right;">6.41</td>
+<td style="text-align: right;">6.37</td>
+<td style="text-align: right;">5.53</td>
+<td style="text-align: right;">3.24</td>
+</tr>
+<tr>
+<td style="text-align: right;">64</td>
+<td style="text-align: right;">6.58</td>
+<td style="text-align: right;">5.88</td>
+<td style="text-align: right;">3.59</td>
+<td style="text-align: right;">3.32</td>
+</tr>
+<tr>
+<td style="text-align: right;">128</td>
+<td style="text-align: right;">6.72</td>
+<td style="text-align: right;">3.32</td>
+<td style="text-align: right;">3.35</td>
+<td style="text-align: right;">3.30</td>
+</tr>
+<tr>
+<td style="text-align: right;">256</td>
+<td style="text-align: right;">5.74</td>
+<td style="text-align: right;">3.37</td>
+<td style="text-align: right;">3.32</td>
+<td style="text-align: right;">3.29</td>
+</tr>
+<tr>
+<td style="text-align: right;">512</td>
+<td style="text-align: right;">3.33</td>
+<td style="text-align: right;">3.32</td>
+<td style="text-align: right;">3.29</td>
+<td style="text-align: right;">3.27</td>
+</tr>
+</tbody>
+</table>
+<p>At width 32 and batch 4,096 the calls are 2.10 ms and 13.37 ms. At width 512 and batch 16,384 they are 67.0 ms and 219 ms. The ratio falls from 6.4× to 3.3× and stays there. At the small end the extra cost is kernel launches. A uniform-grid cubic basis can be one small multiply on <code>[1, u, u², u³]</code>. That path is not this class.</p>
 <hr />
 <h2 id="installation">📦 Installation<a class="headerlink" href="#installation" title="Permanent link">#</a></h2>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>pip<span class="w"> </span>install<span class="w"> </span>kanx<span class="w">                </span><span class="c1"># core (TensorFlow)</span>
@@ -1555,7 +1605,9 @@ One library. Two backends. Real ONNX export. Docker + Kubernetes ready. Promethe
 <hr />
 <h2 id="benchmarks-reproducible-fair-multi-baseline">📊 Benchmarks (reproducible, fair, multi-baseline)<a class="headerlink" href="#benchmarks-reproducible-fair-multi-baseline" title="Permanent link">#</a></h2>
 <p>Synthetic 2-D regression target <code>y = sin(π·x₁) + cos(2π·x₂)</code>,
-100 epochs, Adam(lr=1e-2), batch=128, CPU.</p>
+100 epochs, Adam(lr=1e-2), batch=128.
+Intel Core i9-9900 at 3.10 GHz, Windows, Python 3.11.17, TensorFlow 2.21.0.
+Init seeds 0, 1, and 2 share one dataset. Inference is ten warmup forwards of 4,096 rows, then the median of twenty. The ± is the population standard deviation across seeds.</p>
 <table>
 <thead>
 <tr>
@@ -1568,39 +1620,39 @@ One library. Two backends. Real ONNX export. Docker + Kubernetes ready. Promethe
 </thead>
 <tbody>
 <tr>
-<td><strong>KAN[2,16,1]</strong></td>
+<td>KAN[2,16,1]</td>
 <td style="text-align: right;">432</td>
-<td style="text-align: right;">12.50</td>
-<td style="text-align: right;">68.64</td>
-<td style="text-align: right;"><strong>2.14 × 10⁻⁵</strong></td>
+<td style="text-align: right;">9.42 ± 0.12</td>
+<td style="text-align: right;">26.72 ± 0.31</td>
+<td style="text-align: right;">2.58×10⁻⁴ ± 1.71×10⁻⁴</td>
 </tr>
 <tr>
 <td>KAN[2,32,1]</td>
 <td style="text-align: right;">864</td>
-<td style="text-align: right;">16.62</td>
-<td style="text-align: right;">25.52</td>
-<td style="text-align: right;">4.44 × 10⁻⁴</td>
+<td style="text-align: right;">11.12 ± 0.18</td>
+<td style="text-align: right;">29.15 ± 0.46</td>
+<td style="text-align: right;"><strong>1.09×10⁻⁴ ± 6.34×10⁻⁵</strong></td>
 </tr>
 <tr>
 <td>MLP[2,32,1]</td>
 <td style="text-align: right;">129</td>
-<td style="text-align: right;">5.07</td>
-<td style="text-align: right;">6.17</td>
-<td style="text-align: right;">4.61 × 10⁻¹ (undersized)</td>
+<td style="text-align: right;">6.09 ± 0.07</td>
+<td style="text-align: right;">2.06 ± 0.03</td>
+<td style="text-align: right;">4.62×10⁻¹ ± 1.40×10⁻³</td>
 </tr>
 <tr>
 <td>MLP[2,16,16,1]</td>
 <td style="text-align: right;">337</td>
-<td style="text-align: right;">5.46</td>
-<td style="text-align: right;">4.08</td>
-<td style="text-align: right;">1.60 × 10⁻³</td>
+<td style="text-align: right;">6.78 ± 0.23</td>
+<td style="text-align: right;">2.90 ± 0.05</td>
+<td style="text-align: right;">1.44×10⁻³ ± 3.83×10⁻⁴</td>
 </tr>
 <tr>
 <td>MLP[2,64,64,1]</td>
-<td style="text-align: right;">4 417</td>
-<td style="text-align: right;">6.00</td>
-<td style="text-align: right;">5.74</td>
-<td style="text-align: right;">5.51 × 10⁻⁴</td>
+<td style="text-align: right;">4417</td>
+<td style="text-align: right;">7.00 ± 0.07</td>
+<td style="text-align: right;">3.53 ± 0.05</td>
+<td style="text-align: right;">6.43×10⁻⁴ ± 4.02×10⁻⁴</td>
 </tr>
 </tbody>
 </table>
@@ -1608,11 +1660,9 @@ One library. Two backends. Real ONNX export. Docker + Kubernetes ready. Promethe
   <img src="../assets/benchmark.png" alt="Test MSE for the published KAN and MLP runs" width="720"/>
 </p>
 
-<p><strong>Honest read.</strong> The smallest KAN (432 params) wins on this smooth separable
-target. The same KAN is ~10–15× <em>slower at inference</em> than a same-MSE MLP
-because each edge does a B-spline evaluation. On non-smooth or
-high-dimensional targets, this picture often reverses. We do not claim KANs
-are universally better than MLPs.</p>
+<p><strong>Honest read.</strong> The wider KAN has the lower mean test MSE. The smaller KAN's test MSE moves by about as much as its mean across the three seeds. Inference increases with width, 26.7 ms then 29.2 ms. Both are several times the MLPs on this CPU: KAN[2,16,1] is 7.57× MLP[2,64,64,1]. The 0.2.0 tables each timed one unwarmed forward and are not averaged into these cells. On non-smooth or
+high-dimensional targets, this accuracy picture often reverses. We do not claim KANs are
+universally better than MLPs.</p>
 <p>Reproduce with <code>python benchmarks/compare_mlp.py</code> (quick, 100 epochs) or
 <code>python benchmarks/compare_mlp.py --long</code> (1000 epochs + early-stopping).
 <code>python benchmarks/real_world.py --device cuda</code> trains the PyTorch KAN and MLP

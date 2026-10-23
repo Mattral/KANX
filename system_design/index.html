@@ -690,49 +690,16 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#matrixkan-gpu-optimized-b-spline-evaluation-v020" class="md-nav__link">
+  <a href="#matrixkan-experimental-v021" class="md-nav__link">
     <span class="md-ellipsis">
       
-        MatrixKAN: GPU-Optimized B-spline Evaluation (v0.2.0)
+        MatrixKAN: experimental (v0.2.1)
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="MatrixKAN: GPU-Optimized B-spline Evaluation (v0.2.0)">
+    <nav class="md-nav" aria-label="MatrixKAN: experimental (v0.2.1)">
       <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#architecture" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Architecture
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#trade-offs" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Trade-offs
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#numerical-parity" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Numerical Parity
-      
-    </span>
-  </a>
-  
-</li>
         
           <li class="md-nav__item">
   <a href="#recommendations" class="md-nav__link">
@@ -1589,49 +1556,16 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#matrixkan-gpu-optimized-b-spline-evaluation-v020" class="md-nav__link">
+  <a href="#matrixkan-experimental-v021" class="md-nav__link">
     <span class="md-ellipsis">
       
-        MatrixKAN: GPU-Optimized B-spline Evaluation (v0.2.0)
+        MatrixKAN: experimental (v0.2.1)
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="MatrixKAN: GPU-Optimized B-spline Evaluation (v0.2.0)">
+    <nav class="md-nav" aria-label="MatrixKAN: experimental (v0.2.1)">
       <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#architecture" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Architecture
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#trade-offs" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Trade-offs
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#numerical-parity" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Numerical Parity
-      
-    </span>
-  </a>
-  
-</li>
         
           <li class="md-nav__item">
   <a href="#recommendations" class="md-nav__link">
@@ -1794,7 +1728,7 @@ $$\text{num_basis} = \text{grid_size} + \text{spline_order}$$</p>
 <h2 id="b-spline-grid-management">B-spline Grid Management<a class="headerlink" href="#b-spline-grid-management" title="Permanent link">#</a></h2>
 <h3 id="static-grids-v010">Static Grids (v0.1.0)<a class="headerlink" href="#static-grids-v010" title="Permanent link">#</a></h3>
 <p>By default, KAN models use uniform grids fixed at initialization. For production, users must explicitly calibrate grids to their data using <code>fit_grid_to_data(model, X_train)</code> before training.</p>
-<p><strong>Limitation:</strong> If input data falls outside the grid range, the B-spline contribution silently drops to zero, degrading accuracy.</p>
+<p><strong>Limitation:</strong> The basis is exactly zero only past the outermost extended knot. Outside the stored grid interval it is no longer a partition of unity. Either way, accuracy drops and nothing raises.</p>
 <h3 id="adaptive-grid-updates-v020">Adaptive Grid Updates (v0.2.0)<a class="headerlink" href="#adaptive-grid-updates-v020" title="Permanent link">#</a></h3>
 <p>v0.2.0 introduces <code>model.update_grid_from_samples(x, margin=0.01)</code> for both TensorFlow and PyTorch:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">model</span> <span class="o">=</span> <span class="n">KAN</span><span class="p">([</span><span class="mi">4</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
@@ -1818,73 +1752,13 @@ $$\text{num_basis} = \text{grid_size} + \text{spline_order}$$</p>
 - Particularly useful for tabular data with non-uniform feature ranges</p>
 <p><strong>CPU+GPU compatibility:</strong> Works identically on both backends using backend-native operations (TensorFlow <code>sort</code> + <code>gather</code>, PyTorch <code>quantile</code>).</p>
 <hr />
-<h2 id="matrixkan-gpu-optimized-b-spline-evaluation-v020">MatrixKAN: GPU-Optimized B-spline Evaluation (v0.2.0)<a class="headerlink" href="#matrixkan-gpu-optimized-b-spline-evaluation-v020" title="Permanent link">#</a></h2>
-<p>Standard <code>KANLinear</code> evaluates B-splines via Cox-de Boor recursion, which is inherently sequential in $k$ (recursion depth = polynomial degree). On GPUs, this serializes what should be parallel computation.</p>
-<p><code>MatrixKAN</code> (PyTorch only) replaces recursion with <strong>precomputed recurrence matrices</strong>:</p>
-<p>$$B^{(k)} = B^{(0)} @ M_1 @ M_2 @ \cdots @ M_k \quad \text{(batched einsum)}$$</p>
-<p>where $M_p$ is a $(G+p) \times (G+p)$ matrix encoding the $p$-th recursion level.</p>
-<h3 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">#</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Input x: (batch, in_features)
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    ↓
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>Extend grid by spline_order knots on each side
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    ↓
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>Order-0 basis (piecewise constant): (batch, in_features, grid_size+1)
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    ↓
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>Apply M_1: (batch, in_features, grid_size)
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    ↓
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>Apply M_2: (batch, in_features, grid_size-1)
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    ↓
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>...
-</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>    ↓
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>Apply M_k: (batch, in_features, grid_size + spline_order - k)
-</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>    ↓
-</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>Final basis: (batch, in_features, num_basis)
-</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>    ↓
-</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>Einsum with spline weights: (batch, out_features)
-</span></code></pre></div>
-<h3 id="trade-offs">Trade-offs<a class="headerlink" href="#trade-offs" title="Permanent link">#</a></h3>
-<table>
-<thead>
-<tr>
-<th>Aspect</th>
-<th>Standard KAN</th>
-<th>MatrixKAN</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>GPU throughput</strong></td>
-<td>1× (baseline)</td>
-<td>~1.5–2×</td>
-</tr>
-<tr>
-<td><strong>CPU throughput</strong></td>
-<td>1×</td>
-<td>~1× (comparable)</td>
-</tr>
-<tr>
-<td><strong>Symbolic regression</strong></td>
-<td>✅ (easy to extract per-edge functions)</td>
-<td>❌ (matrix form less interpretable)</td>
-</tr>
-<tr>
-<td><strong>Memory usage</strong></td>
-<td>Lower</td>
-<td>Slightly higher (precomputed matrices)</td>
-</tr>
-<tr>
-<td><strong>Interface</strong></td>
-<td><code>KANLinear</code></td>
-<td><code>MatrixKANLinear</code> (drop-in replacement)</td>
-</tr>
-</tbody>
-</table>
-<h3 id="numerical-parity">Numerical Parity<a class="headerlink" href="#numerical-parity" title="Permanent link">#</a></h3>
-<p>Tests verify that <code>MatrixKAN</code> and standard <code>KAN</code> agree to within <strong>atol=1e-4</strong> when initialized with identical seeds and weights.</p>
+<h2 id="matrixkan-experimental-v021">MatrixKAN: experimental (v0.2.1)<a class="headerlink" href="#matrixkan-experimental-v021" title="Permanent link">#</a></h2>
+<p><code>MatrixKAN</code> is a PyTorch class whose basis is the same Cox–de Boor recursion as <code>KANLinear</code>, with a Python loop over each basis index. <code>build_recurrence_matrix_batch</code> is not called. Its entries do not depend on <code>x</code>, so it is not the recursion. The 0.2.0 docs described a product of precomputed matrices. The code does not do that.</p>
+<p>On a Tesla T4 (torch 2.11.0+cu130, kanx 0.2.0) that loop is slower than vectorized <code>KAN</code> for <code>[2, width, 1]</code>, width 32–512, batch 1,024–16,384. The call-time ratio falls from about 6.4× to about 3.3×. Copied weights match the vectorized basis to a max absolute error of 0 on a CPU check of one 32→1 layer. A profiler on that layer, batch 1,024, torch 2.14.1+cpu, counted 1,394 ATen ops against 205.</p>
 <h3 id="recommendations">Recommendations<a class="headerlink" href="#recommendations" title="Permanent link">#</a></h3>
 <ul>
-<li><strong>Use MatrixKAN</strong> for: GPU inference-only production, high-throughput serving</li>
-<li><strong>Use standard KAN</strong> for: symbolic regression, CPU deployment, research/interpretability</li>
+<li>Use standard <code>KAN</code> as the default.</li>
+<li>Treat <code>MatrixKAN</code> as experimental until a uniform-grid basis, or a fallback for the non-uniform grids <code>update_grid_from_samples</code> writes, is implemented and timed.</li>
 </ul>
 <hr />
 <h2 id="rest-api-serving">REST API &amp; Serving<a class="headerlink" href="#rest-api-serving" title="Permanent link">#</a></h2>
@@ -1897,21 +1771,21 @@ $$\text{num_basis} = \text{grid_size} + \text{spline_order}$$</p>
 <li>Surface a meaningful <code>/api/health</code> signal for orchestrators.</li>
 </ol>
 <h2 id="high-level-topology">High-level topology<a class="headerlink" href="#high-level-topology" title="Permanent link">#</a></h2>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>       ┌─────────────────────────────────────────────────┐
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>       │           Ingress (nginx)                       │
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>       │   kanx.example.com  →  Service kanx-api:80      │
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>       └────────────────────┬────────────────────────────┘
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>                            │
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>            ┌───────────────┴───────────────┐
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>            ▼                               ▼
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>      ┌──────────┐                   ┌──────────┐
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>      │ Pod #1   │                   │ Pod #N   │
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>      │ uvicorn  │   ... HPA 2–10    │ uvicorn  │
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>      │ + kanx   │                   │ + kanx   │
-</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>      └────┬─────┘                   └────┬─────┘
-</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>           │                              │
-</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>           └──────── PVC (RO) ────────────┘
-</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>                    /mnt/models/kanx_model.keras
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>       ┌─────────────────────────────────────────────────┐
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>       │           Ingress (nginx)                       │
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>       │   kanx.example.com  →  Service kanx-api:80      │
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>       └────────────────────┬────────────────────────────┘
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>                            │
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>            ┌───────────────┴───────────────┐
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>            ▼                               ▼
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>      ┌──────────┐                   ┌──────────┐
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>      │ Pod #1   │                   │ Pod #N   │
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>      │ uvicorn  │   ... HPA 2–10    │ uvicorn  │
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>      │ + kanx   │                   │ + kanx   │
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>      └────┬─────┘                   └────┬─────┘
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>           │                              │
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>           └──────── PVC (RO) ────────────┘
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>                    /mnt/models/kanx_model.keras
 </span></code></pre></div>
 <ul>
 <li>Each pod is <strong>stateless</strong>: it owns a single in-process <code>tf.keras.Model</code>
@@ -1921,25 +1795,25 @@ $$\text{num_basis} = \text{grid_size} + \text{spline_order}$$</p>
   POSTing <code>/api/load</code> (or restarting the rollout).</li>
 </ul>
 <h2 id="request-lifecycle-post-apipredict">Request lifecycle: <code>POST /api/predict</code><a class="headerlink" href="#request-lifecycle-post-apipredict" title="Permanent link">#</a></h2>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>client → ingress → svc → pod
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>              │
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>              ▼
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>       Pydantic parse  ──fail──▶ 422 (FastAPI default)
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>              │
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>              ▼
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>       Boundary checks
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>        • rank ∈ {1, 2}        ──fail──▶ 400
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>        • last dim == in_feat  ──fail──▶ 400
-</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>        • batch &lt;= MAX_BATCH   ──fail──▶ 413
-</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>              │
-</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>              ▼
-</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>       ModelRegistry.model  (R-lock)
-</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>              │
-</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>              ▼
-</span><span id="__span-3-16"><a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>       kanx.inference.predict(model, x, batch_size)
-</span><span id="__span-3-17"><a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>              │
-</span><span id="__span-3-18"><a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a>              ▼
-</span><span id="__span-3-19"><a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a>       PredictResponse(output, shape, inference_ms)
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>client → ingress → svc → pod
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>              │
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>              ▼
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>       Pydantic parse  ──fail──▶ 422 (FastAPI default)
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>              │
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>              ▼
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>       Boundary checks
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>        • rank ∈ {1, 2}        ──fail──▶ 400
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>        • last dim == in_feat  ──fail──▶ 400
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>        • batch &lt;= MAX_BATCH   ──fail──▶ 413
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>              │
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>              ▼
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>       ModelRegistry.model  (R-lock)
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>              │
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>              ▼
+</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>       kanx.inference.predict(model, x, batch_size)
+</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>              │
+</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>              ▼
+</span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a>       PredictResponse(output, shape, inference_ms)
 </span></code></pre></div>
 <p>All boundary checks happen <strong>before</strong> any TF graph is invoked — invalid
 requests are cheap.</p>
@@ -1947,12 +1821,12 @@ requests are cheap.</p>
 <p>The user explicitly requested "(b) Serve a trained checkpoint loaded from
 disk" <strong>and</strong> "(c) Both: load checkpoint if available, fallback to fresh
 model". <code>api/app.py:_initialise</code> implements:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>if exists(KANX_CHECKPOINT):
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    model = load_model(KANX_CHECKPOINT)
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    source = "checkpoint:&lt;path&gt;"
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>else:
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    model = build_from_config(KANX_CONFIG)
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>    source = "fresh:&lt;config&gt;"
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>if exists(KANX_CHECKPOINT):
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    model = load_model(KANX_CHECKPOINT)
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    source = "checkpoint:&lt;path&gt;"
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>else:
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    model = build_from_config(KANX_CONFIG)
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    source = "fresh:&lt;config&gt;"
 </span></code></pre></div>
 <p><code>source</code> is surfaced through <code>/api/info</code> and <code>/api/health</code> for observability.</p>
 <h2 id="scaling-model">Scaling model<a class="headerlink" href="#scaling-model" title="Permanent link">#</a></h2>
