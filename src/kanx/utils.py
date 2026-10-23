@@ -32,10 +32,11 @@ def get_logger(name: str = "kanx", level: int = logging.INFO) -> logging.Logger:
 def fit_grid_to_data(model, X, pad: float = 0.05) -> tuple[float, float]:
     """Reset every `KANLinear`'s grid so it covers the observed data range.
 
-    **Why this matters.** B-spline basis functions are zero outside the
-    extended knot range. If your inputs fall outside the layer's
-    ``grid_range``, the spline path silently outputs zero and you only get
-    the SiLU base path — leading to ~50% accuracy loss with no error message.
+    **Why this matters.** The stored grid is an interval (default ``[-1, 1]``).
+    ``extend_grid`` adds ``spline_order`` knots past each end, and the basis
+    is exactly zero only at and beyond that outermost knot. Outside the stored
+    interval the basis is no longer a partition of unity, so a model left on
+    the default grid is not the function you meant to fit. Nothing raises.
 
     Call this BEFORE training when you know your data range::
 
@@ -148,7 +149,8 @@ def check_input_range(model, X, *, name: str = "inputs") -> None:
     if obs_low < grid_low or obs_high > grid_high:
         get_logger("kanx.utils").warning(
             "%s range [%.4f, %.4f] exceeds model grid range [%.4f, %.4f]. "
-            "B-splines clip to zero outside the grid → degraded accuracy. "
+            "The basis is exactly zero only past the outermost extended knot; "
+            "outside the stored grid it is no longer the interval you fit. "
             "Fix with `kanx.utils.fit_grid_to_data(model, X)` before training.",
             name, obs_low, obs_high, grid_low, grid_high,
         )

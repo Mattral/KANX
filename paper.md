@@ -112,8 +112,10 @@ property-based tests against randomly generated grids.
 
 A critical design decision is the `fit_grid_to_data` function, which aligns
 per-feature B-spline knot vectors to the observed input distribution before training.
-Without this step, inputs outside the default grid range `[-1, 1]` produce zero
-spline contribution silently, yielding degraded accuracy with no error message. This
+Without this step, inputs past the outermost extended knot produce zero
+spline contribution. The stored grid defaults to `[-1, 1]`, and the default
+cubic basis is still nonzero between that endpoint and about ±2.2. Leaving
+the stored interval is still the wrong function, and nothing raises. This
 is the most common failure mode for new users and is prominently documented.
 
 ## Key Engineering Trade-offs

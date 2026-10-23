@@ -63,11 +63,11 @@ real-world benchmark. 0.1.8 added Hub, symbolic regression, TensorBoard, and
 Prometheus. 0.1.9 fixed multi-layer grid updates and the Docker image.
 
 ### New features
-- ✅ **MatrixKAN** (GPU-optimized, PyTorch): B-spline evaluation via batched GEMM instead of Cox-de Boor recursion; ~1.5–2× faster on GPU
+- ✅ **MatrixKAN** (PyTorch): B-spline evaluation via batched GEMM instead of Cox-de Boor recursion. The 0.1.7 notes called this ~1.5–2× faster on GPU. The quickstart notebook's saved CUDA cell at hidden width 32 and batch 4096 measures the opposite (MatrixKAN 13.82 ms/call, standard KAN 2.23 ms/call)
   - `src/kanx/torch/matrix_kan.py` (MatrixKANLinear, MatrixKAN classes)
   - Numerical parity with standard KAN (within 1e-4)
   - Full test coverage: shape, numerical agreement, GPU throughput, grid updates, ONNX export
-  - **CPU+GPU compatible**: Fast on GPU, performance comparable to KAN on CPU
+  - **CPU+GPU compatible**: runs on either device. The width-32 CUDA timing above is slower than standard KAN, not faster
   
 - ✅ **Adaptive grid update** (both TensorFlow + PyTorch): `model.update_grid_from_samples(x, margin=0.01)`
   - Per-feature quantile-based grid recalibration from data statistics

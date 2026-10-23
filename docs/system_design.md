@@ -34,7 +34,7 @@ Example: `grid_size=5`, `spline_order=3` → 8 basis functions per feature.
 
 By default, KAN models use uniform grids fixed at initialization. For production, users must explicitly calibrate grids to their data using `fit_grid_to_data(model, X_train)` before training.
 
-**Limitation:** If input data falls outside the grid range, the B-spline contribution silently drops to zero, degrading accuracy.
+**Limitation:** The basis is exactly zero only past the outermost extended knot. Outside the stored grid interval it is no longer a partition of unity. Either way, accuracy drops and nothing raises.
 
 ### Adaptive Grid Updates (v0.2.0)
 
@@ -68,7 +68,7 @@ model.fit(X_train, y_train, epochs=15)   # resume training
 
 ---
 
-## MatrixKAN: GPU-Optimized B-spline Evaluation (v0.2.0)
+## MatrixKAN: batched B-spline evaluation (v0.2.0)
 
 Standard `KANLinear` evaluates B-splines via Cox-de Boor recursion, which is inherently sequential in $k$ (recursion depth = polynomial degree). On GPUs, this serializes what should be parallel computation.
 
@@ -104,7 +104,7 @@ Einsum with spline weights: (batch, out_features)
 
 | Aspect | Standard KAN | MatrixKAN |
 |--------|--------------|-----------|
-| **GPU throughput** | 1× (baseline) | ~1.5–2× |
+| **GPU throughput** | 1× (baseline) | slower at hidden width 32, batch 4096, in the quickstart CUDA cell (13.82 ms vs 2.23 ms). Not measured above that width. |
 | **CPU throughput** | 1× | ~1× (comparable) |
 | **Symbolic regression** | ✅ (easy to extract per-edge functions) | ❌ (matrix form less interpretable) |
 | **Memory usage** | Lower | Slightly higher (precomputed matrices) |
@@ -116,8 +116,8 @@ Tests verify that `MatrixKAN` and standard `KAN` agree to within **atol=1e-4** w
 
 ### Recommendations
 
-- **Use MatrixKAN** for: GPU inference-only production, high-throughput serving
-- **Use standard KAN** for: symbolic regression, CPU deployment, research/interpretability
+- **Use standard KAN** for symbolic regression, CPU deployment, and as the default until you have a timing
+- **Use MatrixKAN** only after you have timed it on the width and batch you will serve. The width-32 CUDA cell in the quickstart notebook is slower for MatrixKAN
 
 ---
 

@@ -291,8 +291,9 @@ class KANLinear(Layer):
         """SiLU residual plus spline einsum.
 
         Float32 uses the inputs' dtype end to end. Reduced precision casts
-        only the two dense contractions. The basis is computed in float32
-        so knot differences do not underflow.
+        only the two dense contractions. The basis stays in float32 because
+        (x - t_i) cancels near a knot and the divided differences amplify
+        that error. Knot spacing at grid size 5 or 1000 does not underflow.
         """
         compute = _PRECISION_DTYPES[self.precision]
         if compute == tf.float32:
@@ -360,7 +361,7 @@ class KANLinear(Layer):
 
         An edge is one ``(input feature, output feature)`` pair: its spline
         coefficients and its base weight. ``threshold`` is an absolute cutoff
-        on the edge score. ``relative`` drops edges at or below that fraction
+        on the edge score. ``relative`` zeros edges at or below that fraction
         of the strongest edge in this layer. Pass either argument, or both
         (the higher cutoff wins).
 

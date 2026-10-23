@@ -7,8 +7,9 @@ The score is either the L2 norm of that edge's parameters, or the RMS of the
 edge function on a batch of inputs. Both cutoffs below apply to whichever
 score the caller computed:
 
-* ``threshold`` — drop edges whose score is less than or equal to this value.
-* ``relative`` — drop edges whose score is less than or equal to
+* ``threshold`` — zero edges whose score is less than or equal to this value.
+  The slot stays, and the contraction still visits it.
+* ``relative`` — zero edges whose score is less than or equal to
   ``relative`` times the strongest edge in the same layer.
 
 When both are set, the higher cutoff is used.
