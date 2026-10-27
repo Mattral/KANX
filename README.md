@@ -209,6 +209,8 @@ The table below times that loop, not a matrix algorithm. Tesla T4, torch 2.11.0+
 
 At width 32 and batch 4,096 the calls are 2.10 ms and 13.37 ms. At width 512 and batch 16,384 they are 67.0 ms and 219 ms. The ratio falls from 6.4× to 3.3× and stays there. At the small end the extra cost is kernel launches: on CPU, one `MatrixKANLinear(32, 1)` forward at batch 1,024 recorded 1,394 ATen ops against 205 for `KANLinear` (torch 2.14.1+cpu). The ~2 ms KAN floor at width 32 is mostly launch overhead as well. A uniform-grid cubic basis can be one small multiply on `[1, u, u², u³]`. That path is not this class, and grids from `update_grid_from_samples` are not uniform.
 
+A second T4 run copies the weights, checks that the outputs match, and times one training step. It sweeps spline orders 3, 5, and 7. The JSON is `benchmarks/results/matrixkan_t4_sweep_0.2.0.json`. Every row matched, with max absolute error 0. At batch 16,384 the forward ratio is about 3.3×, 4.0×, and 4.6× to 4.9× for orders 3, 5, and 7. The backward ratio on those rows is about 4.6×, 6.2×, and 7.3×. The Python loop does more iterations as the order rises, and the ratio rises with it. One order-3 cell does not match the table above: width 512, batch 1,024, MatrixKAN forward 34.9 ms here and 14.9 ms in the earlier run. The other order-3 forward cells agree. This run does not replace that table.
+
 TensorBoard logging and symbolic edge fitting are included:
 
 ```bash

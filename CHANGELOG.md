@@ -6,6 +6,9 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+- Tesla T4 order sweep of the Python-loop MatrixKAN basis (`benchmarks/results/matrixkan_t4_sweep_0.2.0.json`). Orders 3, 5, and 7, copied weights, forward and backward. The loop stays slower. At batch 16,384 the forward ratio is about 3.3×, 4.0×, and 4.6× to 4.9×. This does not replace the forward-only order-3 table.
+
 ## [0.2.1] - 2026-10-23
 
 ### Fixed
