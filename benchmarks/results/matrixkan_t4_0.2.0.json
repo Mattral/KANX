@@ -1,5 +1,5 @@
 {
-  "note": "kanx 0.2.0 MatrixKAN. The basis is Cox-de Boor with a Python loop over each basis index, not a batched GEMM. This run used constructor defaults for grid_size and spline_order, did not copy weights before timing, and did not time backward. benchmarks/matrixkan_t4_sweep.py is the follow-up protocol.",
+  "note": "kanx 0.2.0 MatrixKAN. The basis is Cox-de Boor with a Python loop over each basis index, not a batched GEMM. This run used constructor defaults for grid_size and spline_order, did not copy weights before timing, and did not time backward. benchmarks/matrixkan_t4_sweep.py is the follow-up protocol. The completed run is benchmarks/results/matrixkan_t4_sweep_0.2.0.json.",
   "meta": {
     "kanx": "0.2.0",
     "torch": "2.11.0+cu130",
