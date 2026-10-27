@@ -21,7 +21,7 @@
 
 </p>
 
-> **`pip install kanx`** &nbsp;·&nbsp; A small KAN beats a 10× larger MLP on smooth, separable targets — **honest, param-matched benchmark below.**
+> **`pip install kanx`** &nbsp;·&nbsp; On one smooth target, KAN[2,16,1] has a lower mean test MSE than an MLP with about 10× the parameters. Three seeds overlap — **benchmark below.**
 > One library. Two backends. Real ONNX export. Docker + Kubernetes ready. Prometheus metrics, TensorBoard logging, Hub and symbolic extras are now implemented.
 
 ---
