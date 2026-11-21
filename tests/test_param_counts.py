@@ -40,6 +40,31 @@ def test_kan_default_grid_matches_quoted_counts():
 
 
 @pytest.mark.parametrize(
+    ("grid_size", "spline_order", "expected"),
+    [
+        (5, 1, 672),  # paper.md Table 2
+        (5, 2, 768),
+        (5, 3, 864),
+        (5, 5, 1056),
+        (5, 7, 1248),
+        (8, 3, 1152),  # paper.md grid-size sentence (33% above G=5)
+    ],
+)
+def test_kan_ablation_param_counts(grid_size, spline_order, expected):
+    widths = [2, 32, 1]
+    assert _kan_params(widths, grid_size=grid_size, spline_order=spline_order) == expected
+
+
+def test_count_params_includes_grid_knots():
+    # The quickstart notebook prints Keras count_params(), which also counts
+    # the non-trainable grid: (2 + 32) inputs x (grid_size + 1) knots = 204.
+    model = KAN([2, 32, 1], grid_size=5, spline_order=3)
+    model.build((None, 2))
+    assert model.count_params() == 1068
+    assert model.count_params() - n_params(model) == 204
+
+
+@pytest.mark.parametrize(
     ("in_dim", "hidden", "expected"),
     [
         (2, 32, 129),  # README / benchmarks table

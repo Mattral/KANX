@@ -73,7 +73,7 @@ Init seeds 0, 1, and 2 share one dataset. Inference is ten warmup forwards of 4,
 | MLP[2,64,64,1] | 4417 | 7.00 ± 0.07 | 3.53 ± 0.05 | 6.43×10⁻⁴ ± 4.02×10⁻⁴ |
 
 <p align="center">
-  <img src="docs/assets/benchmark.png" alt="Test MSE for the published KAN and MLP runs" width="720"/>
+  <img src="https://raw.githubusercontent.com/Mattral/KANX/main/docs/assets/benchmark.png" alt="Test MSE for the published KAN and MLP runs" width="720"/>
 </p>
 
 **Honest read.** The wider KAN has the lower mean test MSE. The smaller KAN's test MSE moves by about as much as its mean across the three seeds. Inference increases with width, 26.7 ms then 29.2 ms. Both are several times the MLPs on this CPU: KAN[2,16,1] is 7.57× MLP[2,64,64,1]. The 0.2.0 tables each timed one unwarmed forward and are not averaged into these cells. On non-smooth or high-dimensional targets, this accuracy picture often reverses. We do not claim KANs are universally better than MLPs.
@@ -146,7 +146,7 @@ write_edge_viewer(model, "edges.html")
 ```
 
 <p align="center">
-  <img src="docs/assets/edge_functions.png" alt="Learned edge functions on a two-input KAN" width="640"/>
+  <img src="https://raw.githubusercontent.com/Mattral/KANX/main/docs/assets/edge_functions.png" alt="Learned edge functions on a two-input KAN" width="640"/>
 </p>
 
 Layer 0 of a `KAN([2, 1])` fit to `sin(π x₁) + 0.6 x₂²`. The left edge follows the sine. The right edge follows a bowl. That is a reading of this plot. It is not a proof that each edge owns one term, and a shorter fit of the same target can leave the right side of the bowl unfinished.

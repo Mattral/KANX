@@ -125,17 +125,18 @@ radial functions) follows @liu2025kan for comparability. The default spline orde
 $k = 3$ (cubic) is empirically validated by ablation on a T4 GPU: cubic splines
 achieve 46× lower test MSE than linear splines ($k = 1$), with marginal additional
 gain at $k = 5$ or $k = 7$ (Table 2). The default grid size $G = 5$ is near-optimal;
-$G = 8$ yields a modest improvement at 37% higher parameter cost.
+$G = 8$ yields a modest improvement at 33% higher parameter cost.
 
 | Spline order $k$ | Basis functions | Parameters | Test MSE |
 |-----------------:|----------------:|-----------:|---------:|
-| 1 (linear)       | 6               | 876        | 7.1 × 10⁻⁴ |
-| 2                | 7               | 972        | 2.6 × 10⁻⁴ |
-| **3 (cubic) ★**  | **8**           | **1,068**  | **1.5 × 10⁻⁵** |
-| 5                | 10              | 1,260      | 4.0 × 10⁻⁵ |
-| 7                | 12              | 1,452      | 2.8 × 10⁻⁵ |
+| 1 (linear)       | 6               | 672        | 7.1 × 10⁻⁴ |
+| 2                | 7               | 768        | 2.6 × 10⁻⁴ |
+| **3 (cubic) ★**  | **8**           | **864**    | **1.5 × 10⁻⁵** |
+| 5                | 10              | 1,056      | 4.0 × 10⁻⁵ |
+| 7                | 12              | 1,248      | 2.8 × 10⁻⁵ |
 
 : Spline order ablation. KAN [2,32,1], 30 epochs, Adam(lr=1e-2), batch=128, T4 GPU.
+Parameters are trainable; the 204 grid knots are excluded.
 Target: $y = \sin(\pi x_1) + \cos(2\pi x_2)$. {#tbl:ablation}
 
 ONNX export is implemented via `tf2onnx` for TensorFlow and `torch.onnx` for
