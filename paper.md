@@ -1,5 +1,5 @@
 ---
-title: 'KANX: A Production-Grade Open-Source Library for Kolmogorov–Arnold Networks'
+title: 'KANX: An Open-Source Library for Kolmogorov–Arnold Networks'
 tags:
   - Python
   - machine learning
@@ -37,8 +37,7 @@ PyTorch secondary backend, a FastAPI REST service, and a command-line interface 
 all sharing a common one-liner API (`model.fit(X, y, epochs=30)`). The library
 includes real ONNX export for both backends with verified numerical parity, Docker
 and Kubernetes manifests for cloud-native deployment, a 113-test suite at 94%
-library coverage, and automated PyPI releases via CI/CD. KANX is the first KAN
-library purpose-built for production deployment rather than research demonstration.
+library coverage, and automated PyPI releases via CI/CD.
 
 # Statement of Need
 
@@ -50,8 +49,9 @@ architectures [@liu2025kan2; @temporal_kan; @ka_gnn; @kan_ode].
 
 However, every existing open-source KAN implementation — `pykan` [@pykan],
 `efficient-kan` [@efficient_kan], and `mlx-kan` [@mlx_kan] — is a research
-artifact. None provides ONNX export, a deployment-ready serving layer, property-based
-tests, or a CI/CD release pipeline. This creates a gap between research
+artifact. None provides ONNX export, a serving layer, or property-based tests
+(checked 21 November 2026: pykan v0.2.8, efficient-kan commit 7b6ce1c, mlx-kan
+v0.2.5). This creates a gap between research
 reproducibility and practical adoption: practitioners cannot confidently deploy KANs
 in production environments, and researchers cannot run fair, standardised benchmarks
 against a common baseline.
@@ -74,10 +74,10 @@ The four most widely used open-source KAN libraries are compared in Table 1.
 | REST API service         | ✗ | ✗ | ✗ | **✓ FastAPI** |
 | Docker + Kubernetes      | ✗ | ✗ | ✗ | **✓** |
 | Property-based tests     | ✗ | ✗ | ✗ | **✓ Hypothesis** |
-| Test coverage            | research | research | research | **94%** |
-| CI/CD release pipeline   | ✗ | ✗ | ✗ | **✓ PyPI + GHCR** |
+| PyPI package             | ✓ | ✗ | ✓ | ✓ |
+| CI/CD release pipeline   | ✓ PyPI | ✗ | ✓ PyPI | **✓ PyPI + GHCR** |
 
-: Comparison of open-source KAN libraries (June 2026). {#tbl:comparison}
+: Comparison of open-source KAN libraries, checked 21 November 2026 against pykan v0.2.8, efficient-kan commit 7b6ce1c, and mlx-kan v0.2.5. The vectorised B-spline row was not re-checked. {#tbl:comparison}
 
 KANX does not duplicate the theoretical contributions of `pykan` — the reference
 implementation of @liu2025kan — but complements it with the engineering infrastructure
@@ -182,11 +182,13 @@ representability guarantee of the Kolmogorov–Arnold theorem.
 {#tbl:benchmark}
 
 On a real-world task — the UCI Diabetes dataset [@diabetes_dataset], 442 samples, 10
-features, 5-fold cross-validation — KAN-TF [10,32,1] achieves mean $R^2 = 0.449
-\pm 0.130$ (RMSE = 56.3) with 1,068 parameters, comparable to Ridge regression
-($R^2 = 0.490$) and substantially ahead of an MLP with 4× more parameters
-($R^2 = 0.089$). These results are fully reproducible via the public Colab
-notebook linked in the repository.
+features, 5-fold cross-validation — KAN-TF [10,32,1] (3,168 trainable parameters)
+reaches mean $R^2 = 0.456 \pm 0.114$ (RMSE = 56.1). Ridge regression reaches
+$R^2 = 0.490 \pm 0.091$, and the KAN is below it on three of the five folds. A
+scikit-learn MLP [10,64,64,1] (4,929 parameters) reaches $R^2 = 0.089 \pm 0.259$.
+These figures are the saved output of section 13 of the quickstart notebook, run
+with kanx 0.2.0 on 14 October 2026. The KAN initialization is not seeded, and
+earlier saved runs with kanx 0.1.8 gave $R^2 = 0.449 \pm 0.130$.
 
 ## Community Signals
 

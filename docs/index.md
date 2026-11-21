@@ -211,9 +211,10 @@ do not initialize CUDA in one process. CPU runs and `--smoke` stay TensorFlow-on
 | REST API service  | ❌ | ❌ | ❌ | ✅ FastAPI |
 | Docker + K8s      | ❌ | ❌ | ❌ | ✅ |
 | Property-based tests | ❌ | ❌ | ❌ | ✅ Hypothesis |
-| Test coverage     | research | research | research | **CI + Hypothesis** |
-| PyPI              | ✅ | ✅ | ✅ | ✅ |
-| CI/CD release pipeline | ❌ | ❌ | ❌ | ✅ PyPI + GHCR + Pages |
+| PyPI              | ✅ | ❌ | ✅ | ✅ |
+| CI/CD release pipeline | ✅ PyPI on release | ❌ | ✅ PyPI on release | ✅ PyPI + GHCR + Pages |
+
+Other columns checked on 21 November 2026 against each project's README, docs, and source: pykan v0.2.8 (master `ecde4ec`, 19 January 2025), efficient-kan master `7b6ce1c` (3 July 2024, no tagged release), and mlx-kan v0.2.5 (main `252ba79`, 18 June 2025). ❌ means the feature was not found there. The vectorized B-spline row was not re-checked.
 
 `kanx` packages KAN layers with ONNX export, a FastAPI service, and Docker and
 Kubernetes configs.

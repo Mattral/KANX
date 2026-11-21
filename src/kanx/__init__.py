@@ -1,4 +1,4 @@
-"""kanx — Production-grade Kolmogorov-Arnold Networks in TensorFlow.
+"""kanx — Kolmogorov-Arnold Networks in TensorFlow.
 
 Public API:
     from kanx import KAN, KANLinear, load_config, train, predict

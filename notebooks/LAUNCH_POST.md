@@ -8,7 +8,7 @@ with a fraction of the parameters.
 But every implementation I found was a research prototype: notebooks, no
 tests, no API, no Docker, no benchmarks anyone could rerun. So I built one.
 
-**`kanx`** is a production-grade KAN library:
+**`kanx`** is a KAN library with:
 
 ✔️ **Two backends**: TensorFlow (primary) and PyTorch (`kanx.torch`)
 ✔️ **ONNX export** from both — deploy anywhere
