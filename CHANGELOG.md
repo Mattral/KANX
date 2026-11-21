@@ -6,8 +6,18 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-11-21
+
 ### Added
 - Tesla T4 order sweep of the Python-loop MatrixKAN basis (`benchmarks/results/matrixkan_t4_sweep_0.2.0.json`). Orders 3, 5, and 7, copied weights, forward and backward. The loop stays slower. At batch 16,384 the forward ratio is about 3.3×, 4.0×, and 4.6× to 4.9×. This does not replace the forward-only order-3 table.
+- `tests/test_param_counts.py` checks the trainable parameter counts quoted in the README, docs, and `paper.md`.
+
+### Changed
+- Wording and metadata only. No library behavior changes. The package summary, README, docs, `CITATION.cff`, and `paper.md` describe kanx as a library for Kolmogorov-Arnold Networks in TensorFlow and PyTorch. The headline benchmark states its ratios, seeds, and the UCI diabetes result. The DOI points at 10.5281/zenodo.20615396. The comparison table records the versions it was checked against. `paper.md` Table 3 lists trainable parameter counts (432 and 1,728).
+- Package version is 0.2.2 in `pyproject.toml`, `kanx.__version__`, `CITATION.cff`, and the Helm chart `appVersion`.
+
+### Removed
+- `notebooks/LAUNCH_POST.md`.
 
 ## [0.2.1] - 2026-10-23
 

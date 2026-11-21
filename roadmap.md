@@ -48,7 +48,6 @@ Single source of truth for what's shipped and what's next.
 - ✅ `docs/` — MkDocs source for the website and long-form reference docs
 - ✅ `CHANGELOG.md` (Keep-a-Changelog format)
 - ✅ `notebooks/quickstart.ipynb` — Colab-ready "Train KAN in 2 minutes"
-- ✅ `notebooks/LAUNCH_POST.md` — community launch copy
 - ✅ Benchmark chart (`docs/assets/benchmark.png`) plots the warmed 100-epoch CPU table (three init seeds, Intel Core i9-9900, TensorFlow 2.21.0). KAN[2,32,1] mean test MSE is 1.09×10⁻⁴. MLP[2,64,64,1] is 6.43×10⁻⁴. The old 265× headline compared a shorter, unfair run and stays withdrawn.
 
 ## ✅ Shipped in 0.2.0

@@ -22,8 +22,8 @@ bibliography: paper.bib
 
 # Summary
 
-KANX (`kanx`) is an open-source Python library that provides a production-ready
-implementation of Kolmogorov–Arnold Networks (KANs) [@liu2025kan], a neural
+KANX (`kanx`) is an open-source Python library that implements
+Kolmogorov–Arnold Networks (KANs) [@liu2025kan], a neural
 architecture in which every learnable parameter is a univariate B-spline function
 rather than a fixed scalar weight. Unlike standard multilayer perceptrons (MLPs),
 which apply fixed nonlinearities at nodes, KANs place learnable activation functions
@@ -167,18 +167,18 @@ KANX includes a benchmark harness (`benchmarks/compare_mlp.py`) that compares KA
 and MLP models under honest, parameter-matched conditions. Results on a canonical
 smooth 2-D regression target ($y = \sin(\pi x_1) + \cos(2\pi x_2)$, 30 epochs,
 T4 GPU) are shown in Table 3. KAN [2,64,1] achieves a test $R^2$ of 0.9999 with
-2,124 parameters, outperforming an MLP with twice as many parameters. An ablation
+1,728 trainable parameters, against 4,417 for MLP [2,64,64,1]. An ablation
 over architecture depth confirms that a single wide hidden layer outperforms deeper
 narrow alternatives for this target class — consistent with the two-layer
 representability guarantee of the Kolmogorov–Arnold theorem.
 
 | Model             | Parameters | Test MSE       | Test $R^2$ |
 |-------------------|-----------:|---------------:|-----------:|
-| KAN-TF [2,16,1]   | 564        | ~3 × 10⁻⁴      | 0.9997     |
-| **KAN-TF [2,64,1]** | **2,124** | **1.4 × 10⁻⁴** | **0.9999** |
+| KAN-TF [2,16,1]   | 432        | ~3 × 10⁻⁴      | 0.9997     |
+| **KAN-TF [2,64,1]** | **1,728** | **1.4 × 10⁻⁴** | **0.9999** |
 | MLP [2,64,64,1]   | 4,417      | 5.5 × 10⁻⁴     | 0.9995     |
 
-: Canonical benchmark. KAN-TF vs. MLP, 30 epochs, Adam(lr=1e-2), batch=128, T4 GPU.
+: Canonical benchmark. KAN-TF vs. MLP, 30 epochs, Adam(lr=1e-2), batch=128, T4 GPU. Parameters are trainable; grid knots are excluded.
 {#tbl:benchmark}
 
 On a real-world task — the UCI Diabetes dataset [@diabetes_dataset], 442 samples, 10

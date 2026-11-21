@@ -6,7 +6,8 @@ authors:
   - family-names: "Myet"
     given-names: "Min Htet"
     orcid: "https://orcid.org/0009-0005-0853-8301"
-version: "0.2.1"
+version: "0.2.2"
+date-released: "2026-11-21"
 doi: "10.5281/zenodo.20615396"
 repository-code: "https://github.com/Mattral/KANX"
 license: Apache-2.0

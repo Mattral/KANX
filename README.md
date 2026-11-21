@@ -361,7 +361,7 @@ python -m kanx predict --checkpoint model.keras --input X.json
 
 ## Status and scope
 
-kanx is at 0.2.1. Its package metadata marks it Beta.
+kanx is at 0.2.2. Its package metadata marks it Beta.
 
 **Tested in CI** ([`ci.yml`](https://github.com/Mattral/KANX/blob/main/.github/workflows/ci.yml), every push and pull request to `main`):
 
