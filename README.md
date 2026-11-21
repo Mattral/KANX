@@ -1,9 +1,8 @@
 <h1 align="center">🚀 kanx</h1>
 
 <p align="center">
-  <strong>Production-grade Kolmogorov-Arnold Networks</strong><br>
-  <em>TensorFlow + PyTorch + ONNX — one library, four surfaces. </em><br>
-  <em> > `kanx` is the only Kolmogorov-Arnold Network (KAN) library purpose-built for production deployment.</em>
+  <strong>Kolmogorov-Arnold Networks for TensorFlow and PyTorch</strong><br>
+  <em>A Python library with ONNX export, a FastAPI service, a CLI, and Docker and Kubernetes configs.</em>
 </p>
 
 <p align="center">
@@ -11,19 +10,20 @@
   <a href="https://pypi.org/project/kanx/"><img alt="Downloads" src="https://img.shields.io/pypi/dm/kanx?style=for-the-badge&color=A78BFA"></a>
   <a href="https://pepy.tech/project/kanx">  <img alt="Total Downloads" src="https://img.shields.io/pepy/dt/kanx?style=for-the-badge&color=F87171"></a>
   <a href="./CITATION.cff"><img alt="Cite" src="https://img.shields.io/badge/cite-CITATION.cff-brightgreen?style=for-the-badge"></a>
+  <a href="https://github.com/Mattral/KANX/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/Mattral/KANX/ci.yml?branch=main&label=CI&style=for-the-badge&logo=github"></a>
 
   <img alt="Python" src="https://img.shields.io/pypi/pyversions/kanx?style=for-the-badge&logo=python&logoColor=white">
   <a href="https://mattral.github.io/KANX/"><img alt="Docs" src="https://img.shields.io/badge/docs-mkdocs--material-22C55E?style=for-the-badge&logo=readthedocs&logoColor=white"></a>
   <a href="https://colab.research.google.com/github/Mattral/KANX/blob/main/notebooks/quickstart.ipynb"><img alt="Colab" src="https://img.shields.io/badge/Colab-train_in_2_to_5_min-F9AB00?style=for-the-badge&logo=googlecolab&logoColor=white"></a>
   <a href="./LICENSE"><img alt="License" src="https://img.shields.io/badge/license-Apache--2.0-A78BFA?style=for-the-badge"></a>
   <a href="https://doi.org/10.5281/zenodo.20615396">
-    <img alt="DOI" src="https://img.shields.io/badge/DOI-10.5281%2Fzenodo.20430883-7C3AED?style=for-the-badge&logo=zenodo&logoColor=white">
+    <img alt="DOI" src="https://img.shields.io/badge/DOI-10.5281%2Fzenodo.20615396-7C3AED?style=for-the-badge&logo=zenodo&logoColor=white">
   </a>
 
 </p>
 
-> **`pip install kanx`** &nbsp;·&nbsp; A small KAN beats a 10× larger MLP on smooth, separable targets — **honest, param-matched benchmark below.**
-> One library. Two backends. Real ONNX export. Docker + Kubernetes ready. Prometheus metrics, TensorBoard logging, Hub and symbolic extras are now implemented.
+> **`pip install kanx`** &nbsp;·&nbsp; On one smooth 2-D target, `sin(πx₁) + cos(2πx₂)`, KAN[2,32,1] (864 parameters) reaches a mean test MSE of 1.09×10⁻⁴. MLP[2,64,64,1] (4,417 parameters, 5.1× more) reaches 6.43×10⁻⁴. That is three init seeds on one dataset, on one CPU. The same KAN is 8.3× slower at inference (29.15 ms against 3.53 ms for 4,096 rows) and 1.6× slower to train. On UCI diabetes (one 5-fold CV run in the quickstart notebook) the TensorFlow KAN does not beat ridge regression: mean R² 0.456 against 0.490. Tables and caveats are in the benchmark section.
+> One library. Two backends. ONNX export. Docker and Kubernetes configs. Prometheus metrics, TensorBoard logging, Hub and symbolic extras.
 
 ---
 
@@ -31,7 +31,7 @@
 ## ⭐ Why kanx?
 <div align="center">
 
-Every other KAN library stops at research. `kanx` goes the full distance:
+Feature comparison with three other KAN libraries:
 
 | | [pykan](https://github.com/KindXiaoming/pykan) | [efficient-kan](https://github.com/Blealtan/efficient-kan) | [mlx-kan](https://github.com/Goekdeniz-Guelmez/mlx-kan) | **kanx** |
 |---|:---:|:---:|:---:|:---:|
@@ -47,7 +47,7 @@ Every other KAN library stops at research. `kanx` goes the full distance:
 
 </div>
 
-Most of the other KAN implementations are strictly academic. `KANX` bridges the gap between theory and reality by providing:
+What kanx provides:
 1. **Multi-Backend Support:** Native TensorFlow and PyTorch (`MatrixKAN`) implementations.
 2. **Real Deployment:** True ONNX export, FastAPI (`/api/predict`), Docker, and Kubernetes configs out-of-the-box.
 3. **MatrixKAN:** Experimental. The forward pass is the same Cox–de Boor recursion as `KAN`, written as a Python loop over each basis index. It does not run a batched GEMM. On a Tesla T4 that loop stays slower from width 32 to 512.
@@ -76,6 +76,10 @@ Init seeds 0, 1, and 2 share one dataset. Inference is ten warmup forwards of 4,
 </p>
 
 **Honest read.** The wider KAN has the lower mean test MSE. The smaller KAN's test MSE moves by about as much as its mean across the three seeds. Inference increases with width, 26.7 ms then 29.2 ms. Both are several times the MLPs on this CPU: KAN[2,16,1] is 7.57× MLP[2,64,64,1]. The 0.2.0 tables each timed one unwarmed forward and are not averaged into these cells. On non-smooth or high-dimensional targets, this accuracy picture often reverses. We do not claim KANs are universally better than MLPs.
+
+KAN[2,16,1] has 10.2× fewer parameters than MLP[2,64,64,1] and a lower mean test MSE (2.58×10⁻⁴ against 6.43×10⁻⁴). The mean ± one standard deviation ranges of the two overlap across the three seeds, so this run does not show it ahead of the 10× larger MLP. KAN[2,32,1] against the same MLP is 5.1× fewer parameters, 5.9× lower mean test MSE, and 8.3× the inference time.
+
+On UCI diabetes (442 rows, 10 features, `KFold(5, shuffle=True, random_state=0)`, 100 epochs, kanx 0.2.0, section 13 of `notebooks/quickstart.ipynb`), KAN-TF[10,32,1] scores mean R² 0.456 ± 0.114 and ridge regression 0.490 ± 0.091. The KAN is below ridge on three of the five folds. The PyTorch KAN in the same cell scores −0.006. This is one run with an unseeded KAN initialization.
 
 Reproduce with `python benchmarks/compare_mlp.py` (quick, 100 epochs) or
 `python benchmarks/compare_mlp.py --long` (1000 epochs + early-stopping).
@@ -325,7 +329,7 @@ export_onnx_tf(model, "kan.onnx")
 
 ✔ Dynamic batch
 ✔ Verified numerical consistency (1e-5)
-✔ Works with ONNX Runtime / TensorRT / OpenVINO
+✔ Runs in ONNX Runtime (tested in CI). TensorRT and OpenVINO are not tested.
 
 ---
 
@@ -351,6 +355,31 @@ python -m kanx info                                          # versions
 python -m kanx train --config configs/default.yaml           # train
 python -m kanx predict --checkpoint model.keras --input X.json
 ```
+
+---
+
+## Status and scope
+
+kanx is at 0.2.1. Its package metadata marks it Beta.
+
+**Tested in CI** ([`ci.yml`](https://github.com/Mattral/KANX/blob/main/.github/workflows/ci.yml), every push and pull request to `main`):
+
+- `ruff` on `src`, `tests`, `api`, `benchmarks`, and `examples`.
+- `pytest tests/` on Python 3.10, 3.11, and 3.12, Ubuntu, CPU only. This covers the TensorFlow backend, the CPU PyTorch backend, ONNX export checked in ONNX Runtime, the FastAPI service against a live `uvicorn`, Hypothesis property tests, Helm chart rendering, and the CPU distributed smoke tests. The last `main` run before this section was written reported 181 passed and 2 skipped on each Python version, with 77% coverage of `src/kanx`. The two skips are the MatrixKAN CUDA tests.
+- A Docker build, with `/api/health`, `/api/info`, and `/api/predict` called on the running container.
+- An MkDocs build, and `--smoke` runs of both benchmark scripts.
+
+**Not tested in CI:**
+
+- GPU code paths. The CUDA tests are skipped, and the Tesla T4 MatrixKAN tables are manual runs.
+- Windows and macOS. The published CPU benchmark is a manual run on Windows.
+- TensorRT and OpenVINO. Only ONNX Runtime runs the exported models.
+- Installing the Kubernetes manifests or the Helm chart on a cluster. The chart is only rendered.
+- The published benchmark numbers. `--smoke` checks that the scripts run and produce finite metrics. It does not reproduce the tables.
+- The notebooks.
+- `black` runs with `|| true`, so formatting cannot fail the job. `mypy` is configured in `pyproject.toml` but is not run.
+
+**What 1.0 means.** Until 1.0, a minor release can change the public API, and the changelog lists each change. From 1.0, the documented API follows Semantic Versioning: `kanx.KAN`, `KANLinear`, `fit_grid_to_data`, `export_onnx_tf`, `kanx.torch.KAN`, `kanx.torch.export_onnx`, the `python -m kanx` commands, and the REST endpoints change incompatibly only in a new major version. Anything marked experimental, currently `MatrixKAN`, is outside that promise. No 1.0 date is set.
 
 ---
 
@@ -396,9 +425,9 @@ the library.
 
 Our work is formally documented and available as a preprint:
 
-- 📘 Title: *KANX: A Production-Grade Open-Source Library for Kolmogorov-Arnold Networks*
+- 📘 Title: *KANX: An Open-Source Library for Kolmogorov-Arnold Networks*
 - 📍 DOI: https://doi.org/10.5281/zenodo.20615396
-- 📂 Zenodo: https://zenodo.org/records/20430883
+- 📂 Zenodo: https://zenodo.org/records/20615396
 - 📄 [Read Paper (preprint)](docs/preprint.pdf)
 - 📄 [Read Paper (ArXiv)](docs/KANX_ArXiv_Paper.pdf)
 
@@ -408,7 +437,7 @@ Our work is formally documented and available as a preprint:
 
 ```bibtex
 @article{mattral2026kanx,
-  title={KANX: A Production-Grade Open-Source Library for Kolmogorov-Arnold Networks},
+  title={KANX: An Open-Source Library for Kolmogorov-Arnold Networks},
   author={Myet, Min Htet},
   year={2026},
   doi={10.5281/zenodo.20615396},

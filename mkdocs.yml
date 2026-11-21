@@ -1,5 +1,5 @@
 site_name: kanx
-site_description: Production-grade Kolmogorov-Arnold Networks (TensorFlow + PyTorch + ONNX)
+site_description: Kolmogorov-Arnold Networks for TensorFlow and PyTorch, with ONNX export
 site_url: https://mattral.github.io/KANX/
 repo_url: https://github.com/Mattral/KANX
 repo_name: Mattral/KANX

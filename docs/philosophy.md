@@ -2,9 +2,9 @@
 
 ## What kanx is
 
-`kanx` is a **production-grade TensorFlow library** for Kolmogorov-Arnold
-Networks (KANs, Liu et al. 2024). It is engineered as if a serious ML infra
-team — the kind that ships PyTorch, JAX or Keras — owned the codebase.
+`kanx` is a Python library for Kolmogorov-Arnold Networks (KANs, Liu et al.
+2024). TensorFlow is the primary backend and PyTorch is the second. It adds
+ONNX export, a FastAPI service, a CLI, and Docker and Kubernetes configs.
 
 The library that ships in this repo is the same library that runs in the
 Docker image, that is served by FastAPI, that is tested by CI, that is

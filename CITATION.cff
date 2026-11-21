@@ -1,12 +1,13 @@
 cff-version: "1.2.0"
 message: "If you use KANX, please cite both this software and the KAN paper."
 type: software
-title: "KANX: Production-grade Kolmogorov-Arnold Networks"
+title: "KANX: Kolmogorov-Arnold Networks for TensorFlow and PyTorch"
 authors:
   - family-names: "Myet"
     given-names: "Min Htet"
+    orcid: "https://orcid.org/0009-0005-0853-8301"
 version: "0.2.1"
-doi: "10.5281/zenodo.20430883"
+doi: "10.5281/zenodo.20615396"
 repository-code: "https://github.com/Mattral/KANX"
 license: Apache-2.0
 keywords:
@@ -16,10 +17,39 @@ keywords:
   - tensorflow
   - pytorch
   - onnx
-preferred-citation: |
-  @article{liu2024kan,
-    title={KAN: Kolmogorov-Arnold Networks for symbolic regression},
-    author={Liu, Min and others},
-    journal={arXiv preprint arXiv:2404.19756},
-    year={2024}
-  }
+preferred-citation:
+  type: article
+  title: "KANX: An Open-Source Library for Kolmogorov-Arnold Networks"
+  authors:
+    - family-names: "Myet"
+      given-names: "Min Htet"
+      orcid: "https://orcid.org/0009-0005-0853-8301"
+  year: 2026
+  doi: "10.5281/zenodo.20615396"
+  publisher:
+    name: "Zenodo"
+references:
+  - type: article
+    title: "KAN: Kolmogorov-Arnold Networks"
+    authors:
+      - family-names: "Liu"
+        given-names: "Ziming"
+      - family-names: "Wang"
+        given-names: "Yixuan"
+      - family-names: "Vaidya"
+        given-names: "Sachin"
+      - family-names: "Ruehle"
+        given-names: "Fabian"
+      - family-names: "Halverson"
+        given-names: "James"
+      - family-names: "Soljačić"
+        given-names: "Marin"
+      - family-names: "Hou"
+        given-names: "Thomas Y."
+      - family-names: "Tegmark"
+        given-names: "Max"
+    year: 2024
+    identifiers:
+      - type: other
+        value: "arXiv:2404.19756"
+    url: "https://arxiv.org/abs/2404.19756"

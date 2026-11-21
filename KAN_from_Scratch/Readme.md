@@ -1,7 +1,7 @@
 
 # TensorFlow Implementation of Kolmogorov-Arnold Network (KAN)
 
-*Update,* see [KANX Repo](https://github.com/Mattral/KANX/) for the production grade library implementation.
+*Update,* see [KANX Repo](https://github.com/Mattral/KANX/) for the maintained library implementation.
 
 ---
 

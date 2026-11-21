@@ -27,6 +27,20 @@ The canonical table is [`benchmarks/results.md`](https://github.com/Mattral/KANX
 - On a **smooth separable 2-D regression**, the wider KAN has the lower mean test MSE. The smaller KAN's error moves by about as much as its mean across seeds.
 - The previous headline claim ('265× lower MSE than MLP[2,64,64,1]') compared KAN[2,32,1] (864 params) against a deliberately **5× over-parameterised** MLP that was trained for only 30 epochs. That comparison was unfair on two axes.
 - **Compute cost.** On this run, warmed inference for KAN[2,16,1] is 7.57× MLP[2,64,64,1]. That ratio is this machine and this protocol. The older ~3–5× line described an unwarmed single call and is withdrawn.
+- **Parameter ratios.** KAN[2,32,1] against MLP[2,64,64,1] is 5.1× fewer parameters (864 against 4,417), 5.9× lower mean test MSE, 8.3× the inference time (29.15 ms against 3.53 ms), and 1.6× the training time. KAN[2,16,1] is 10.2× fewer parameters with a lower mean test MSE (2.58×10⁻⁴ against 6.43×10⁻⁴), but the mean ± one standard deviation ranges overlap across the three seeds. This run does not show KAN[2,16,1] ahead of the 10× larger MLP.
+
+## UCI diabetes (quickstart notebook)
+
+Section 13 of `notebooks/quickstart.ipynb` runs a 5-fold CV on UCI diabetes (442 rows, 10 features, `KFold(5, shuffle=True, random_state=0)`, 100 epochs, kanx 0.2.0). The saved output is one run, and the KAN initialization is not seeded.
+
+| Model | Mean R² ± std | Mean RMSE ± std |
+|---|---|---|
+| KAN-TF[10,32,1] | 0.456 ± 0.114 | 56.1 ± 3.7 |
+| KAN-Torch[10,32,1] | −0.006 ± 0.013 | 77.1 ± 4.1 |
+| scikit-learn MLP[10,64,64,1] | 0.089 ± 0.259 | 72.3 ± 7.1 |
+| Ridge regression | 0.490 ± 0.091 | 54.5 ± 2.2 |
+
+The TensorFlow KAN does not beat ridge regression. It is below ridge on three of the five folds. The PyTorch KAN does not fit this task under the notebook's settings. The repository has no diabetes run that compares a KAN with its SiLU base path alone.
 
 ## Caveats
 
