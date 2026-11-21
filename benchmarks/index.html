@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Production-grade Kolmogorov-Arnold Networks (TensorFlow + PyTorch + ONNX)">
+        <meta name="description" content="Kolmogorov-Arnold Networks for TensorFlow and PyTorch, with ONNX export">
       
       
       
@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.2">
     
     
       
@@ -31,10 +31,10 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.57a0d79d.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.fb2fffe2.min.css">
       
       
 
@@ -984,6 +984,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#uci-diabetes-quickstart-notebook" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UCI diabetes (quickstart notebook)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#caveats" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1372,6 +1383,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#uci-diabetes-quickstart-notebook" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UCI diabetes (quickstart notebook)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#caveats" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1496,7 +1518,42 @@
 <li>On a <strong>smooth separable 2-D regression</strong>, the wider KAN has the lower mean test MSE. The smaller KAN's error moves by about as much as its mean across seeds.</li>
 <li>The previous headline claim ('265× lower MSE than MLP[2,64,64,1]') compared KAN[2,32,1] (864 params) against a deliberately <strong>5× over-parameterised</strong> MLP that was trained for only 30 epochs. That comparison was unfair on two axes.</li>
 <li><strong>Compute cost.</strong> On this run, warmed inference for KAN[2,16,1] is 7.57× MLP[2,64,64,1]. That ratio is this machine and this protocol. The older ~3–5× line described an unwarmed single call and is withdrawn.</li>
+<li><strong>Parameter ratios.</strong> KAN[2,32,1] against MLP[2,64,64,1] is 5.1× fewer parameters (864 against 4,417), 5.9× lower mean test MSE, 8.3× the inference time (29.15 ms against 3.53 ms), and 1.6× the training time. KAN[2,16,1] is 10.2× fewer parameters with a lower mean test MSE (2.58×10⁻⁴ against 6.43×10⁻⁴), but the mean ± one standard deviation ranges overlap across the three seeds. This run does not show KAN[2,16,1] ahead of the 10× larger MLP.</li>
 </ul>
+<h2 id="uci-diabetes-quickstart-notebook">UCI diabetes (quickstart notebook)<a class="headerlink" href="#uci-diabetes-quickstart-notebook" title="Permanent link">#</a></h2>
+<p>Section 13 of <code>notebooks/quickstart.ipynb</code> runs a 5-fold CV on UCI diabetes (442 rows, 10 features, <code>KFold(5, shuffle=True, random_state=0)</code>, 100 epochs, kanx 0.2.0). The saved output is one run, and the KAN initialization is not seeded.</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Mean R² ± std</th>
+<th>Mean RMSE ± std</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>KAN-TF[10,32,1]</td>
+<td>0.456 ± 0.114</td>
+<td>56.1 ± 3.7</td>
+</tr>
+<tr>
+<td>KAN-Torch[10,32,1]</td>
+<td>−0.006 ± 0.013</td>
+<td>77.1 ± 4.1</td>
+</tr>
+<tr>
+<td>scikit-learn MLP[10,64,64,1]</td>
+<td>0.089 ± 0.259</td>
+<td>72.3 ± 7.1</td>
+</tr>
+<tr>
+<td>Ridge regression</td>
+<td>0.490 ± 0.091</td>
+<td>54.5 ± 2.2</td>
+</tr>
+</tbody>
+</table>
+<p>The TensorFlow KAN does not beat ridge regression. It is below ridge on three of the five folds. The PyTorch KAN does not fit this task under the notebook's settings. The repository has no diabetes run that compares a KAN with its SiLU base path alone.</p>
 <h2 id="caveats">Caveats<a class="headerlink" href="#caveats" title="Permanent link">#</a></h2>
 <ul>
 <li>This benchmark is <strong>best-case</strong> for KANs (the target is exactly the kind of function the Kolmogorov-Arnold representation theorem applies to). On real tabular or vision data, the picture is far more nuanced.</li>
@@ -1652,10 +1709,10 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "navigation.indexes", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "content.action.edit"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "navigation.indexes", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "content.action.edit"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../assets/javascripts/bundle.a5f9d56c.min.js"></script>
       
     
   </body>
