@@ -1737,28 +1737,22 @@ process. CPU runs and <code>--smoke</code> stay TensorFlow-only.</p>
 <td style="text-align: center;">✅ Hypothesis</td>
 </tr>
 <tr>
-<td>Test coverage</td>
-<td style="text-align: center;">research</td>
-<td style="text-align: center;">research</td>
-<td style="text-align: center;">research</td>
-<td style="text-align: center;"><strong>CI + Hypothesis</strong></td>
-</tr>
-<tr>
 <td>PyPI</td>
 <td style="text-align: center;">✅</td>
-<td style="text-align: center;">✅</td>
+<td style="text-align: center;">❌</td>
 <td style="text-align: center;">✅</td>
 <td style="text-align: center;">✅</td>
 </tr>
 <tr>
 <td>CI/CD release pipeline</td>
+<td style="text-align: center;">✅ PyPI on release</td>
 <td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
+<td style="text-align: center;">✅ PyPI on release</td>
 <td style="text-align: center;">✅ PyPI + GHCR + Pages</td>
 </tr>
 </tbody>
 </table>
+<p>Other columns checked on 21 November 2026 against each project's README, docs, and source: pykan v0.2.8 (master <code>ecde4ec</code>, 19 January 2025), efficient-kan master <code>7b6ce1c</code> (3 July 2024, no tagged release), and mlx-kan v0.2.5 (main <code>252ba79</code>, 18 June 2025). ❌ means the feature was not found there. The vectorized B-spline row was not re-checked.</p>
 <p><code>kanx</code> packages KAN layers with ONNX export, a FastAPI service, and Docker and
 Kubernetes configs.</p>
 <hr />
