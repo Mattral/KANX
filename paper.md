@@ -121,10 +121,11 @@ is the most common failure mode for new users and is prominently documented.
 ## Key Engineering Trade-offs
 
 The choice of B-spline parameterisation over alternatives (e.g., Fourier bases or
-radial functions) follows @liu2025kan for comparability. The default spline order
-$k = 3$ (cubic) is empirically validated by ablation on a T4 GPU: cubic splines
-achieve 46× lower test MSE than linear splines ($k = 1$), with marginal additional
-gain at $k = 5$ or $k = 7$ (Table 2). The default grid size $G = 5$ is near-optimal;
+radial functions) follows @liu2025kan for comparability, and so does the default
+spline order $k = 3$ (cubic). The repository has two single, unseeded runs of a
+spline-order sweep, and they disagree on which order is best: $k = 3$ has the lowest
+test MSE in the T4 run (Table 2) and $k = 5$ in the 14 October 2026 notebook output.
+No ordering of spline orders is claimed. The default grid size $G = 5$ is near-optimal;
 $G = 8$ yields a modest improvement at 33% higher parameter cost.
 
 | Spline order $k$ | Basis functions | Parameters | Test MSE |
@@ -135,9 +136,15 @@ $G = 8$ yields a modest improvement at 33% higher parameter cost.
 | 5                | 10              | 1,056      | 4.0 × 10⁻⁵ |
 | 7                | 12              | 1,248      | 2.8 × 10⁻⁵ |
 
-: Spline order ablation. KAN [2,32,1], 30 epochs, Adam(lr=1e-2), batch=128, T4 GPU.
+: Spline order sweep, a single unseeded run (quickstart notebook, kanx 0.1.8).
+KAN [2,32,1], 30 epochs, Adam(lr=1e-2), batch=128, T4 GPU. ★ marks the default.
 Parameters are trainable; the 204 grid knots are excluded.
 Target: $y = \sin(\pi x_1) + \cos(2\pi x_2)$. {#tbl:ablation}
+
+A second single, unseeded run of the same notebook cell (kanx 0.2.0, output saved
+14 October 2026) gave test MSE $3.8 \times 10^{-4}$, $1.1 \times 10^{-4}$,
+$1.0 \times 10^{-4}$, $2.1 \times 10^{-5}$ and $1.1 \times 10^{-4}$ for
+$k = 1, 2, 3, 5, 7$.
 
 ONNX export is implemented via `tf2onnx` for TensorFlow and `torch.onnx` for
 PyTorch. Both produce models with dynamic batch axes, verified to agree with eager
